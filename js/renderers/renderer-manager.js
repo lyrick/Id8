@@ -211,12 +211,33 @@ class RendererManager {
 
         // 如果渲染器已加载，直接返回成功
         if (renderer.isLoaded()) {
+            console.log(`渲染器 ${name} 已加载，无需初始化`);
             return Promise.resolve();
         }
 
+        console.log(`开始初始化渲染器 ${name}...`);
         // 添加超时处理，避免无限等待
         return Promise.race([
-            renderer.init(),
+            renderer.init()
+                .then(() => {
+                    console.log(`渲染器 ${name} 初始化成功`);
+                    return Promise.resolve();
+                })
+                .catch(error => {
+                    console.error(`渲染器 ${name} 初始化失败:`, error);
+                    // 如果是主要CDN源失败，尝试使用备用源
+                    if (this.cdnSources.backup && !this.loadRetries[name]) {
+                        this.loadRetries[name] = true;
+                        console.log(`尝试使用备用CDN源加载渲染器 ${name}...`);
+                        // 交换主备CDN源
+                        const temp = this.cdnSources.primary;
+                        this.cdnSources.primary = this.cdnSources.backup;
+                        this.cdnSources.backup = temp;
+                        // 重试初始化
+                        return renderer.init();
+                    }
+                    throw error;
+                }),
             new Promise((_, reject) => {
                 setTimeout(() => {
                     reject(new Error(`初始化渲染器 ${name} 超时，请刷新页面重试`));
@@ -254,31 +275,38 @@ class RendererManager {
             return Promise.reject(new Error(`渲染器 ${this.activeRenderer} 不存在`));
         }
 
-        return this.initRenderer(this.activeRenderer)
-            .then(() => {
-                // 确保渲染器已正确加载
-                if (!renderer.isLoaded()) {
-                    throw new Error(`渲染器 ${this.activeRenderer} 未正确加载`);
-                }
-                return renderer.render(code, container, this);
-            })
-            .catch(error => {
-                console.error(`渲染失败:`, error);
-                
-                // 如果当前渲染器不是Mermaid，尝试使用Mermaid作为备选
-                if (this.activeRenderer !== 'mermaid' && 
-                    this.renderers['mermaid'] && 
-                    this.renderers['mermaid'].isLoaded()) {
+        // 确保渲染器已初始化
+        if (!renderer.isLoaded()) {
+            console.log(`渲染器 ${this.activeRenderer} 未加载，正在初始化...`);
+            return this.initRenderer(this.activeRenderer)
+                .then(() => {
+                    console.log(`渲染器 ${this.activeRenderer} 初始化成功，开始渲染`);
+                    // 确保渲染器已正确加载
+                    if (!renderer.isLoaded()) {
+                        throw new Error(`渲染器 ${this.activeRenderer} 未正确加载`);
+                    }
+                    return renderer.render(code, container, this);
+                })
+                .catch(error => {
+                    console.error(`渲染失败:`, error);
                     
-                    console.warn(`尝试使用Mermaid作为备选渲染器`);
-                    this.activeRenderer = 'mermaid';
+                    // 如果当前渲染器不是Mermaid，尝试使用Mermaid作为备选
+                    if (this.activeRenderer !== 'mermaid' && 
+                        this.renderers['mermaid'] && 
+                        this.renderers['mermaid'].isLoaded()) {
+                        
+                        console.warn(`尝试使用Mermaid作为备选渲染器`);
+                        this.activeRenderer = 'mermaid';
+                        
+                        // 递归调用，但限制递归深度为1，避免无限循环
+                        return this.renderers['mermaid'].render(code, container, this);
+                    }
                     
-                    // 递归调用，但限制递归深度为1，避免无限循环
-                    return this.renderers['mermaid'].render(code, container, this);
-                }
-                
-                throw error;
-            });
+                    throw error;
+                });
+        }
+        
+        return renderer.render(code, container, this);
     }
 
     /**

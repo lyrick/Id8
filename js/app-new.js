@@ -113,6 +113,24 @@ document.addEventListener('DOMContentLoaded', function() {
         card.addEventListener('click', () => {
             const exampleType = card.dataset.example;
             
+            // 获取示例代码
+            let exampleCode;
+            if (extendedExamples && extendedExamples[activeRenderer] && extendedExamples[activeRenderer][exampleType]) {
+                exampleCode = extendedExamples[activeRenderer][exampleType];
+            } else if (examples && examples[exampleType]) {
+                exampleCode = examples[exampleType];
+            } else {
+                toast.error('未找到示例代码');
+                return;
+            }
+            
+            // 设置编辑器内容
+            if (activeEditor === 'markdown') {
+                markdownInput.value = exampleCode;
+            } else {
+                plaintextInput.value = exampleCode;
+            }
+            
             // 更新层级导航中的图表类型
             hierarchyNav.setActiveChartType(exampleType);
             
@@ -121,6 +139,10 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 card.classList.remove('pulse');
             }, 500);
+            
+            // 显示加载示例提示
+            const cardTitle = card.querySelector('.example-title')?.textContent || '图表';
+            toast.info(`已加载${cardTitle}示例`);
             
             // 使用防抖函数延迟生成图表，避免UI阻塞
             setTimeout(() => {
@@ -148,7 +170,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // 获取当前层级导航状态
         const navState = hierarchyNav.getState();
         activeRenderer = navState.renderer;
-        activeChartType = navState.chartType;
+        
+        // 自动检测图表类型
+        activeChartType = chartTypeDetector.detect(code, activeRenderer);
+        
+        // 更新层级导航中的图表类型（不会显示在UI上，但会保持内部状态一致）
+        hierarchyNav.setActiveChartType(activeChartType);
         
         // 显示加载中提示
         const loadingToast = toast.loading('正在生成流程图...');
@@ -429,6 +456,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 tab.classList.add('active');
                 activeRenderer = renderer.id;
                 
+                // 更新层级导航中的渲染器
+                if (hierarchyNav && typeof hierarchyNav.setActiveRenderer === 'function') {
+                    hierarchyNav.setActiveRenderer(renderer.id);
+                }
+                
                 // 添加微动效
                 tab.classList.add('pulse');
                 setTimeout(() => {
@@ -457,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 获取当前渲染器支持的图表类型
         let supportedTypes = [];
-        if (typeof rendererManager !== 'undefined' && rendererManager.renderers[rendererId]) {
+        if (typeof rendererManager !== 'undefined' && rendererManager.renderers && rendererManager.renderers[rendererId]) {
             supportedTypes = rendererManager.renderers[rendererId].supportedTypes || [];
         } else if (rendererId === 'mermaid') {
             // 默认Mermaid支持的图表类型
@@ -465,7 +497,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 { id: 'flowchart', name: '流程图', description: '用于展示业务流程或操作步骤' },
                 { id: 'sequence', name: '时序图', description: '用于展示系统组件之间的交互' },
                 { id: 'state', name: '状态图', description: '用于展示状态转换' },
-                { id: 'class', name: '类图', description: '用于表示类及其关系' }
+                { id: 'class', name: '类图', description: '用于表示类及其关系' },
+                { id: 'gantt', name: '甘特图', description: '项目计划和时间管理图表' }
             ];
         }
         
@@ -475,12 +508,28 @@ document.addEventListener('DOMContentLoaded', function() {
             card.className = 'example-card';
             card.dataset.example = type.id;
             
+            // 获取当前语言的文本
+            let typeName = type.name;
+            let typeDesc = type.description;
+            
+            // 如果存在语言切换器，尝试获取翻译文本
+            if (typeof languageSwitcher !== 'undefined' && languageSwitcher.getText) {
+                const key = `${type.id}_title`;
+                const descKey = `${type.id}_desc`;
+                if (languageSwitcher.getText(key) !== key) {
+                    typeName = languageSwitcher.getText(key);
+                }
+                if (languageSwitcher.getText(descKey) !== descKey) {
+                    typeDesc = languageSwitcher.getText(descKey);
+                }
+            }
+            
             card.innerHTML = `
                 <div class="example-header">
-                    <div class="example-title">${type.name}</div>
+                    <div class="example-title">${typeName}</div>
                 </div>
                 <div class="example-body">
-                    ${type.description}
+                    ${typeDesc}
                 </div>
             `;
             
@@ -493,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 从扩展示例中获取代码
                 if (extendedExamples && extendedExamples[rendererId] && extendedExamples[rendererId][type.id]) {
                     exampleCode = extendedExamples[rendererId][type.id];
-                } else if (examples[type.id]) {
+                } else if (examples && examples[type.id]) {
                     // 兼容原有示例
                     exampleCode = examples[type.id];
                 } else {
@@ -507,8 +556,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     plaintextInput.value = exampleCode;
                 }
                 
+                // 更新层级导航中的图表类型
+                if (hierarchyNav && typeof hierarchyNav.setActiveChartType === 'function') {
+                    hierarchyNav.setActiveChartType(type.id);
+                }
+                
                 // 显示加载示例提示
-                toast.info(`已加载${type.name}示例`);
+                toast.info(`已加载${typeName}示例`);
                 
                 // 使用防抖函数延迟生成图表，避免UI阻塞
                 setTimeout(() => {
@@ -544,12 +598,23 @@ document.addEventListener('DOMContentLoaded', function() {
             imageControls.init();
         }
         
+        // 确保渲染器管理器已初始化
+        if (typeof rendererManager === 'undefined' || !rendererManager.getRenderers) {
+            console.warn('渲染器管理器未正确初始化，使用默认设置');
+        }
+        
+        // 更新渲染器选项卡和示例卡片
         updateRendererTabs();
-        updateExampleCards('mermaid');
+        updateExampleCards(activeRenderer);
         
         // 生成一个默认的流程图示例
         if (!mermaidDiagram.innerHTML && markdownInput.value) {
             generateDiagram();
         }
+        
+        // 监听语言变更事件，更新示例卡片
+        document.addEventListener('languageChanged', () => {
+            updateExampleCards(activeRenderer);
+        });
     }, 500);
 });

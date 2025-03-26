@@ -231,6 +231,26 @@ class LanguageSwitcher {
         document.getElementById('markdown-input').placeholder = this.getText('markdown_placeholder');
         document.getElementById('plaintext-input').placeholder = this.getText('plaintext_placeholder');
         
+        // 更新空图表提示文本
+        const emptyDiagram = document.querySelector('#mermaid-diagram div');
+        if (emptyDiagram && (emptyDiagram.textContent.includes('请输入流程图代码') || emptyDiagram.textContent.includes('Please enter diagram code'))) {
+            emptyDiagram.textContent = this.getText('empty_diagram_text');
+        }
+        
+        // 更新图像控制按钮
+        const imageControls = document.querySelectorAll('.image-control');
+        imageControls.forEach(control => {
+            if (control.title.includes('放大') || control.title.includes('Zoom In')) {
+                control.title = this.getText('zoom_in');
+            } else if (control.title.includes('缩小') || control.title.includes('Zoom Out')) {
+                control.title = this.getText('zoom_out');
+            } else if (control.title.includes('重置') || control.title.includes('Reset')) {
+                control.title = this.getText('reset_zoom');
+            } else if (control.title.includes('切换') || control.title.includes('Toggle')) {
+                control.title = this.getText('toggle_layout');
+            }
+        });
+        
         // 触发自定义事件，通知其他组件语言已更改
         const event = new CustomEvent('languageChanged', { detail: { language: this.currentLanguage } });
         document.dispatchEvent(event);

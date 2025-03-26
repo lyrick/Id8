@@ -88,32 +88,29 @@ class HierarchyNavigation {
             level2Selector.appendChild(option);
         });
         
-        // 第三级：图表类型选择
+        // 第三级图表类型选择部分被隐藏，改为自动检测
+        // 创建一个隐藏的容器来存储图表类型信息，但不显示在UI上
         const level3Container = document.createElement('div');
         level3Container.className = 'level3-container';
-        
-        const level3Title = document.createElement('div');
-        level3Title.className = 'hierarchy-title';
-        level3Title.textContent = '3. 选择图表类型';
+        level3Container.style.display = 'none'; // 隐藏此容器
         
         const level3Selector = document.createElement('div');
         level3Selector.className = 'level3-selector';
         level3Selector.id = 'chart-type-selector';
+        level3Container.appendChild(level3Selector);
         
-        // 将所有元素添加到层级导航容器
+        // 将元素添加到层级导航容器
         hierarchyNav.appendChild(level1Title);
         hierarchyNav.appendChild(level1Selector);
         hierarchyNav.appendChild(level2Container);
         level2Container.appendChild(level2Title);
         level2Container.appendChild(level2Selector);
-        hierarchyNav.appendChild(level3Container);
-        level3Container.appendChild(level3Title);
-        level3Container.appendChild(level3Selector);
+        hierarchyNav.appendChild(level3Container); // 添加隐藏的容器
         
         // 插入到主内容区域的开头
         mainContent.insertBefore(hierarchyNav, mainContent.firstChild);
         
-        // 初始化第三级选择器内容
+        // 初始化第三级选择器内容（虽然隐藏，但仍需初始化以支持功能）
         this.updateChartTypeOptions();
     }
 
@@ -236,16 +233,36 @@ class HierarchyNavigation {
             }
         });
         
-        // 更新渲染器管理器中的活动渲染器
-        this.rendererManager.setActiveRenderer(renderer);
+        // 确保渲染器管理器已初始化
+        if (this.rendererManager && typeof this.rendererManager.setActiveRenderer === 'function') {
+            // 初始化渲染器
+            this.rendererManager.initRenderer(renderer)
+                .then(() => {
+                    // 更新渲染器管理器中的活动渲染器
+                    this.rendererManager.setActiveRenderer(renderer);
+                    console.log(`渲染器 ${renderer} 已初始化并设置为活动`);
+                })
+                .catch(error => {
+                    console.error(`初始化渲染器 ${renderer} 失败:`, error);
+                    // 如果初始化失败，尝试使用默认的Mermaid渲染器
+                    this.activeRenderer = 'mermaid';
+                    this.rendererManager.setActiveRenderer('mermaid');
+                    // 更新UI显示
+                    document.querySelectorAll('.level2-option').forEach(option => {
+                        option.classList.toggle('active', option.dataset.renderer === 'mermaid');
+                    });
+                });
+        }
         
         // 更新图表类型选项
         this.updateChartTypeOptions();
         
         // 重置图表类型为当前渲染器的第一个支持类型
-        const supportedTypes = this.rendererManager.renderers[renderer].supportedTypes;
-        if (supportedTypes && supportedTypes.length > 0) {
-            this.setActiveChartType(supportedTypes[0].id);
+        if (this.rendererManager && this.rendererManager.renderers[renderer]) {
+            const supportedTypes = this.rendererManager.renderers[renderer].supportedTypes;
+            if (supportedTypes && supportedTypes.length > 0) {
+                this.setActiveChartType(supportedTypes[0].id);
+            }
         }
         
         // 触发变更回调
