@@ -1,0 +1,279 @@
+:root {
+    --primary-color: #FCEA00;
+    --secondary-color: #FA8A00;
+    --accent-color: #FA446D;
+    --info-color: #33B8DB;
+    --success-color: #07DA9E;
+    --level1-color: #6A5ACD;
+    --level2-color: #3CB371;
+    --level3-color: #FF7F50;
+    --text-color: #333;
+    --background-color: #f5f5f5;
+    --card-background: #ffffff;
+    --border-radius: 12px;
+    --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --transition-time: 0.3s;
+}
+
+/* 层级导航容器 */
+.hierarchy-nav {
+    margin-bottom: 30px;
+}
+
+/* 层级标题 */
+.hierarchy-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+/* 第一级选择器 - 编辑模式 */
+.level1-selector {
+    display: flex;
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+    margin-bottom: 15px;
+    border-left: 4px solid var(--level1-color);
+}
+
+.level1-option {
+    flex: 1;
+    padding: 15px 0;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-time);
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+}
+
+.level1-option:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.level1-option.active {
+    color: var(--level1-color);
+    background-color: rgba(106, 90, 205, 0.1);
+}
+
+.level1-option.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--level1-color);
+}
+
+/* 第二级选择器 - 渲染器类型 */
+.level2-container {
+    margin-left: 20px;
+    margin-bottom: 15px;
+}
+
+.level2-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    padding: 10px;
+    box-shadow: var(--box-shadow);
+    border-left: 4px solid var(--level2-color);
+}
+
+.level2-option {
+    padding: 10px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--transition-time);
+    font-weight: 500;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.level2-option:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.level2-option.active {
+    color: var(--level2-color);
+    background-color: rgba(60, 179, 113, 0.1);
+    font-weight: 600;
+}
+
+.level2-option .icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 第三级选择器 - 图表类型 */
+.level3-container {
+    margin-left: 40px;
+    margin-bottom: 15px;
+}
+
+.level3-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    padding: 10px;
+    box-shadow: var(--box-shadow);
+    border-left: 4px solid var(--level3-color);
+}
+
+.level3-option {
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--transition-time);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.level3-option:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+    transform: translateY(-2px);
+}
+
+.level3-option.active {
+    color: var(--level3-color);
+    background-color: rgba(255, 127, 80, 0.1);
+    font-weight: 600;
+}
+
+.level3-option .icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+
+.level3-option .title {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.level3-option .description {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* 图标样式 */
+.renderer-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.chart-icon {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 5px;
+}
+
+/* 层级导航的响应式设计 */
+@media (max-width: 768px) {
+    .level2-container {
+        margin-left: 10px;
+    }
+    
+    .level3-container {
+        margin-left: 20px;
+    }
+    
+    .level2-selector {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .level3-selector {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+}
+
+/* 微动效 */
+@keyframes pulse-hierarchy {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+}
+
+.pulse-hierarchy {
+    animation: pulse-hierarchy 0.5s;
+}
+
+/* 可折叠面板 */
+.collapsible {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.collapsible::after {
+    content: '▼';
+    font-size: 0.8rem;
+    transition: transform 0.3s;
+}
+
+.collapsible.collapsed::after {
+    transform: rotate(-90deg);
+}
+
+.collapsible-content {
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+}
+
+.collapsible-content.collapsed {
+    max-height: 0;
+}
+
+/* 工具提示 */
+.tooltip {
+    position: relative;
+}
+
+.tooltip .tooltip-text {
+    visibility: hidden;
+    width: 200px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.8rem;
+    pointer-events: none;
+}
+
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}

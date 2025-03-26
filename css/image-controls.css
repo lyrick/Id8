@@ -1,0 +1,84 @@
+/* 图像控制器样式 */
+.image-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: center;
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    backdrop-filter: blur(4px);
+}
+
+.image-control-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: white;
+    color: #333;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.image-control-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.image-control-btn:active {
+    transform: translateY(0);
+}
+
+/* 预览容器样式 */
+.preview-container {
+    position: relative;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* 垂直布局样式 */
+.preview-container.vertical-layout {
+    flex-direction: column;
+}
+
+/* 图表容器样式 */
+#mermaid-diagram {
+    transition: transform 0.3s ease;
+    transform-origin: center center;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .image-controls {
+        bottom: 10px;
+        right: 10px;
+        padding: 5px;
+        gap: 5px;
+    }
+    
+    .image-control-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+}
+
+/* 微动效 */
+.image-control-btn.pulse {
+    animation: pulse 0.5s;
+}

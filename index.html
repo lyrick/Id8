@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流程图生成工具</title>
+    <!-- 样式表 -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/hierarchy-style.css">
+    <link rel="stylesheet" href="css/language-switcher.css">
+    <link rel="stylesheet" href="css/image-controls.css">
+    <link rel="stylesheet" href="css/color-options.css">
+    <!-- 第三方库 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <!-- Toast组件 -->
+    <link rel="stylesheet" href="css/toast.css">
+    <script src="js/toast.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>流程图生成工具</h1>
+            <p class="subtitle">支持多种图表库，轻松创建美观的流程图</p>
+        </header>
+
+        <div class="main-content">
+            <!-- 层级导航将在这里动态生成 -->
+
+
+            <div class="editor-container">
+                <div class="editor-section">
+                    <div class="editor-card">
+                        <div class="card-header">
+                            <div class="card-title">编辑器</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content active" id="markdown-editor">
+                                <textarea id="markdown-input" placeholder="请输入Markdown格式的流程图代码，例如：
+graph TD
+    A[开始] --> B{判断条件}
+    B -->|条件1| C[处理1]
+    B -->|条件2| D[处理2]
+    C --> E[结束]
+    D --> E"></textarea>
+                            </div>
+                            <div class="tab-content" id="plaintext-editor">
+                                <textarea id="plaintext-input" placeholder="请输入纯文本格式的流程图代码，例如：
+graph TD
+A[用户支付] --> B(判断余额是否充足?)
+B --> |N| C[选择银行卡支付]
+B --> |Y| D[输入密码支付]
+C --> E(验证是否成功?)
+D --> F
+E --> |N| F[重新支付]
+E --> |Y| G[支付成功]"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <button id="generate-btn" class="btn btn-primary">生成流程图</button>
+                        <button id="download-btn" class="btn btn-secondary">下载图片</button>
+                        <button id="clear-btn" class="btn btn-accent">清空内容</button>
+                    </div>
+
+                    <div class="color-picker-container">
+                        <div class="card-title">选择背景颜色：</div>
+                        <!-- 基础颜色 -->
+                        <div class="color-option active" data-color="#ffffff" data-name="白色" style="background-color: #ffffff;"></div>
+                        <div class="color-option" data-color="#f5f5f5" data-name="浅灰" style="background-color: #f5f5f5;"></div>
+                        
+                        <!-- 主题色系 -->
+                        <div class="color-option primary-light" data-color="#FFEAAA" data-name="浅黄" style="background-color: #FFEAAA;"></div>
+                        <div class="color-option primary" data-color="#FCEA00" data-name="明黄" style="background-color: #FCEA00;"></div>
+                        <div class="color-option primary-dark" data-color="#D5C000" data-name="暗黄" style="background-color: #D5C000;"></div>
+                        
+                        <div class="color-option secondary-light" data-color="#FFAC55" data-name="浅橙" style="background-color: #FFAC55;"></div>
+                        <div class="color-option secondary" data-color="#FA8A00" data-name="明橙" style="background-color: #FA8A00;"></div>
+                        <div class="color-option secondary-dark" data-color="#D57300" data-name="暗橙" style="background-color: #D57300;"></div>
+                        
+                        <!-- 柔和色 -->
+                        <div class="color-option soft-1" data-color="#E8F4F8" data-name="淡蓝" style="background-color: #E8F4F8;"></div>
+                        <div class="color-option soft-2" data-color="#FFF8E8" data-name="米色" style="background-color: #FFF8E8;"></div>
+                        <div class="color-option soft-3" data-color="#F8E8F0" data-name="淡粉" style="background-color: #F8E8F0;"></div>
+                        <div class="color-option soft-4" data-color="#E8F8F0" data-name="淡绿" style="background-color: #E8F8F0;"></div>
+                        
+                        <!-- 深色主题 -->
+                        <div class="color-option dark-theme-1" data-color="#2C3E50" data-name="深蓝" style="background-color: #2C3E50;"></div>
+                        <div class="color-option dark-theme-2" data-color="#34495E" data-name="靛蓝" style="background-color: #34495E;"></div>
+                        <div class="color-option dark-theme-3" data-color="#1A2530" data-name="暗黑" style="background-color: #1A2530;"></div>
+                        
+                        <!-- 渐变色 -->
+                        <div class="color-option gradient-1" data-color="linear-gradient(135deg, #FCEA00, #FA8A00)" data-name="黄橙渐变" style="background: linear-gradient(135deg, #FCEA00, #FA8A00);"></div>
+                        <div class="color-option gradient-2" data-color="linear-gradient(135deg, #FA8A00, #FA446D)" data-name="橙红渐变" style="background: linear-gradient(135deg, #FA8A00, #FA446D);"></div>
+                        <div class="color-option gradient-3" data-color="linear-gradient(135deg, #FA446D, #33B8DB)" data-name="红蓝渐变" style="background: linear-gradient(135deg, #FA446D, #33B8DB);"></div>
+                        <div class="color-option gradient-4" data-color="linear-gradient(135deg, #33B8DB, #07DA9E)" data-name="蓝绿渐变" style="background: linear-gradient(135deg, #33B8DB, #07DA9E);"></div>
+                    </div>
+                </div>
+
+                <div class="preview-section">
+                    <div class="preview-card">
+                        <div class="card-header">
+                            <div class="card-title">预览</div>
+                        </div>
+                        <div class="card-body">
+                            <div id="preview-container" class="preview-container">
+                                <div id="mermaid-diagram"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="examples-section">
+                <h3 class="examples-title">示例模板</h3>
+                <div class="examples-grid">
+                    <div class="example-card" data-example="flowchart">
+                        <div class="example-header">
+                            <div class="example-title">基础流程图</div>
+                        </div>
+                        <div class="example-body">
+                            简单的流程图示例，包含开始、判断、处理和结束节点
+                        </div>
+                    </div>
+                    <div class="example-card" data-example="sequence">
+                        <div class="example-header">
+                            <div class="example-title">时序图</div>
+                        </div>
+                        <div class="example-body">
+                            展示系统组件之间交互的时序图
+                        </div>
+                    </div>
+                    <div class="example-card" data-example="state">
+                        <div class="example-header">
+                            <div class="example-title">状态图</div>
+                        </div>
+                        <div class="example-body">
+                            展示系统状态变化的状态图
+                        </div>
+                    </div>
+                    <div class="example-card" data-example="class">
+                        <div class="example-header">
+                            <div class="example-title">类图</div>
+                        </div>
+                        <div class="example-body">
+                            展示类之间关系的类图
+                        </div>
+                    </div>
+                    <div class="example-card" data-example="gantt">
+                        <div class="example-header">
+                            <div class="example-title">甘特图</div>
+                        </div>
+                        <div class="example-body">
+                            项目计划和时间管理图表
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2023 流程图生成工具 | 使用纯前端技术构建</p>
+        </footer>
+    </div>
+
+    <!-- 应用脚本 -->
+    <script src="js/examples.js"></script>
+    <script src="js/examples-extended.js"></script>
+    <script src="js/examples-gantt.js"></script>
+    <script src="js/renderers/renderer-manager.js"></script>
+    <script src="js/hierarchy-nav.js"></script>
+    <script src="js/language-switcher.js"></script>
+    <script src="js/image-controls.js"></script>
+    <script src="js/app-new.js"></script>
+</body>
+</html>
