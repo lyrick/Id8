@@ -108,48 +108,59 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 加载示例
-    exampleCards.forEach(card => {
-        card.addEventListener('click', () => {
-            const exampleType = card.dataset.example;
-            
-            // 获取示例代码
-            let exampleCode;
-            if (extendedExamples && extendedExamples[activeRenderer] && extendedExamples[activeRenderer][exampleType]) {
-                exampleCode = extendedExamples[activeRenderer][exampleType];
-            } else if (examples && examples[exampleType]) {
-                exampleCode = examples[exampleType];
-            } else {
-                toast.error('未找到示例代码');
-                return;
-            }
-            
-            // 设置编辑器内容
-            if (activeEditor === 'markdown') {
-                markdownInput.value = exampleCode;
-            } else {
-                plaintextInput.value = exampleCode;
-            }
-            
-            // 更新层级导航中的图表类型
-            hierarchyNav.setActiveChartType(exampleType);
-            
-            // 添加微动效
-            card.classList.add('pulse');
-            setTimeout(() => {
-                card.classList.remove('pulse');
-            }, 500);
-            
-            // 显示加载示例提示
-            const cardTitle = card.querySelector('.example-title')?.textContent || '图表';
-            toast.info(`已加载${cardTitle}示例`);
-            
-            // 使用防抖函数延迟生成图表，避免UI阻塞
-            setTimeout(() => {
-                generateDiagram();
-            }, 100);
-        });
+    // 使用事件委托处理示例卡片点击
+    document.addEventListener('click', (e) => {
+        const card = e.target.closest('.example-card');
+        if (!card) return;
+        
+        const exampleType = card.dataset.example;
+        if (!exampleType) return;
+        
+        // 获取当前层级导航状态
+        const navState = hierarchyNav.getState();
+        activeRenderer = navState.renderer;
+        activeEditor = navState.editMode;
+        
+        // 获取示例代码
+        let exampleCode;
+        if (extendedExamples && extendedExamples[activeRenderer] && extendedExamples[activeRenderer][exampleType]) {
+            exampleCode = extendedExamples[activeRenderer][exampleType];
+        } else if (examples && examples[exampleType]) {
+            exampleCode = examples[exampleType];
+        } else {
+            toast.error('未找到示例代码');
+            return;
+        }
+        
+        // 设置编辑器内容
+        if (activeEditor === 'markdown') {
+            markdownInput.value = exampleCode;
+        } else {
+            plaintextInput.value = exampleCode;
+        }
+        
+        // 更新层级导航中的图表类型
+        hierarchyNav.setActiveChartType(exampleType);
+        
+        // 添加微动效
+        card.classList.add('pulse');
+        setTimeout(() => {
+            card.classList.remove('pulse');
+        }, 500);
+        
+        // 显示加载示例提示
+        const cardTitle = card.querySelector('.example-title')?.textContent || '图表';
+        toast.info(`已加载${cardTitle}示例`);
+        
+        // 使用防抖函数延迟生成图表，避免UI阻塞
+        setTimeout(() => {
+            generateDiagram();
+        }, 100);
     });
+
+    
+    // 初始化时更新示例卡片
+    hierarchyNav.updateExampleCards();
 
 
     // 生成流程图函数
@@ -165,6 +176,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!code) {
             mermaidDiagram.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">请输入流程图代码</div>';
             return;
+        }
+
+        // 实体名称语法验证 - 不直接抛出错误，而是通过错误处理机制处理
+        try {
+            const chineseEntityPattern = /[\u4e00-\u9fa5]/;
+            if (code.includes('erDiagram') && chineseEntityPattern.test(code)) {
+                // 创建错误对象但不直接抛出，而是通过错误处理函数处理
+                const erError = new Error('ER图语法错误');
+                return handleRenderError(erError, loadingToast);
+            }
+        } catch (validationError) {
+            // 如果验证过程中出现任何错误，也通过错误处理函数处理
+            return handleRenderError(validationError, loadingToast);
         }
         
         // 获取当前层级导航状态
@@ -240,7 +264,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 处理渲染错误的函数
     function handleRenderError(error, loadingToast) {
-        console.error('渲染错误:', error);
+        // 仅在控制台记录错误，不显示给用户
+        console.error('图表渲染错误:', error);
         
         // 隐藏加载提示
         if (loadingToast) loadingToast.hide();
@@ -252,30 +277,33 @@ document.addEventListener('DOMContentLoaded', function() {
         // 针对特定错误提供更友好的提示
         if (errorMessage.includes('Invalid date:Milestone')) {
             errorMessage = '甘特图日期格式错误';
-            errorTip = '提示：里程碑应使用格式 "milestone, after taskId, 0d"，确保日期格式为 YYYY-MM-DD';
+            errorTip = '里程碑应使用正确的日期格式';
         } else if (errorMessage.includes('无法加载脚本')) {
             errorMessage = '外部库加载失败';
-            errorTip = '提示：正在尝试使用备用源加载，请稍后再试，或尝试使用其他渲染器';
+            errorTip = '请稍后再试';
         } else if (errorMessage.includes('库未正确加载')) {
             errorMessage = '渲染库加载失败';
-            errorTip = '提示：请刷新页面重试，或尝试使用其他渲染器（如Mermaid）';
+            errorTip = '请刷新页面重试';
         } else if (errorMessage.includes('渲染失败')) {
-            // 保留原始错误信息
-            errorTip = '提示：请检查语法是否正确，或尝试使用其他渲染器';
+            errorMessage = '图表渲染失败';
+            errorTip = '请检查语法是否正确';
         } else if (errorMessage.includes('加载脚本超时')) {
             errorMessage = '网络连接缓慢，加载超时';
-            errorTip = '提示：请检查网络连接，或尝试使用已加载的渲染器（如Mermaid）';
+            errorTip = '请检查网络连接';
+        } else if (errorMessage.includes('erDiagram')) {
+            errorMessage = 'ER图语法错误';
+            errorTip = '请检查ER图语法格式';
         }
         
-        // 显示错误提示
-        toast.error(`流程图生成失败: ${errorMessage}`);
+        // 只显示友好的toast提示，不在页面上显示详细错误
+        if (errorTip) {
+            toast.error(`${errorMessage}：${errorTip}`, 5000);
+        } else {
+            toast.error(`流程图生成失败，请检查语法`, 5000);
+        }
         
-        // 在预览区域显示错误信息
-        mermaidDiagram.innerHTML = `<div style="color: #ff4444; padding: 10px; background-color: #ffe6e6; border-radius: 4px;">
-            <strong>错误:</strong> ${errorMessage}
-            ${errorTip ? `<p style="margin-top: 8px; font-size: 14px;">${errorTip}</p>` : ''}
-            <p style="margin-top: 12px; font-size: 13px;">建议使用Mermaid渲染器，它已预加载并更稳定</p>
-        </div>`;
+        // 在预览区域显示友好的提示，而不是错误详情
+        mermaidDiagram.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">请检查流程图代码并重试</div>';
         
         // 恢复按钮状态
         generateBtn.disabled = false;
@@ -396,10 +424,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 创建一个基本的渲染器管理器作为备选
                 return {
                     setActiveRenderer: () => true,
-                    render: (code, container) => mermaid.render('mermaid-svg', code).then(result => {
-                        document.getElementById(container).innerHTML = result.svg;
-                        return result;
-                    })
+                    render: (code, container) => {
+                        mermaid.initialize({
+                            startOnLoad: false,
+                            securityLevel: 'loose',
+                            er: {
+                                diagramPadding: 20,
+                                useMaxWidth: true
+                            }
+                        });
+                        return mermaid.render('mermaid-svg', code).then(result => {
+                            document.getElementById(container).innerHTML = result.svg;
+                            return result;
+                        });
+                    }
                 };
             }
         } catch (error) {

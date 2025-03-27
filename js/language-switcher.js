@@ -44,7 +44,7 @@ class LanguageSwitcher {
             'examples_title': '示例模板',
             'empty_diagram_text': '请输入流程图代码',
             
-            // 示例卡片
+            // 示例卡片 - Mermaid
             'flowchart_title': '基础流程图',
             'flowchart_desc': '简单的流程图示例，包含开始、判断、处理和结束节点',
             'sequence_title': '时序图',
@@ -55,6 +55,32 @@ class LanguageSwitcher {
             'class_desc': '展示类之间关系的类图',
             'gantt_title': '甘特图',
             'gantt_desc': '项目计划和时间管理图表',
+            'pie_title': '饼图',
+            'pie_desc': '数据可视化图表',
+            'er_title': 'ER图',
+            'er_desc': '实体关系图',
+            'journey_title': '用户旅程图',
+            'journey_desc': '用户体验流程图',
+            
+            // 示例卡片 - PlantUML
+            'usecase_title': '用例图',
+            'usecase_desc': '用户与系统交互图',
+            'activity_title': '活动图',
+            'activity_desc': '活动流程图',
+            'component_title': '组件图',
+            'component_desc': '系统组件关系图',
+            
+            // 示例卡片 - Graphviz
+            'digraph_title': '有向图',
+            'digraph_desc': '展示有向关系的图表',
+            'graph_title': '无向图',
+            'graph_desc': '展示无向关系的图表',
+            'strict_title': '严格图',
+            'strict_desc': '不允许多重边的图表',
+            
+            // 示例卡片 - MathJax
+            'math_title': '数学公式',
+            'math_desc': '数学公式和表达式',
             
             // 提示消息
             'loading_diagram': '正在生成流程图...',
@@ -66,6 +92,8 @@ class LanguageSwitcher {
             'content_cleared': '内容已清空',
             'example_loaded': '已加载{0}示例',
             'renderer_error': '渲染器 {0} 不可用，使用Mermaid渲染器',
+            'renderer_changed': '已切换到{0}渲染器',
+            'edit_mode_changed': '已切换到{0}编辑模式',
             
             // 图像控制
             'zoom_in': '放大',
@@ -100,7 +128,7 @@ class LanguageSwitcher {
             'examples_title': 'Example Templates',
             'empty_diagram_text': 'Please enter diagram code',
             
-            // 示例卡片
+            // 示例卡片 - Mermaid
             'flowchart_title': 'Basic Flowchart',
             'flowchart_desc': 'Simple flowchart example with start, condition, process, and end nodes',
             'sequence_title': 'Sequence Diagram',
@@ -111,6 +139,32 @@ class LanguageSwitcher {
             'class_desc': 'Diagram showing relationships between classes',
             'gantt_title': 'Gantt Chart',
             'gantt_desc': 'Project planning and time management chart',
+            'pie_title': 'Pie Chart',
+            'pie_desc': 'Data visualization chart',
+            'er_title': 'ER Diagram',
+            'er_desc': 'Entity Relationship Diagram',
+            'journey_title': 'User Journey',
+            'journey_desc': 'User experience flow diagram',
+            
+            // 示例卡片 - PlantUML
+            'usecase_title': 'Use Case Diagram',
+            'usecase_desc': 'User and system interaction diagram',
+            'activity_title': 'Activity Diagram',
+            'activity_desc': 'Activity flow diagram',
+            'component_title': 'Component Diagram',
+            'component_desc': 'System component relationship diagram',
+            
+            // 示例卡片 - Graphviz
+            'digraph_title': 'Directed Graph',
+            'digraph_desc': 'Diagram showing directed relationships',
+            'graph_title': 'Undirected Graph',
+            'graph_desc': 'Diagram showing undirected relationships',
+            'strict_title': 'Strict Graph',
+            'strict_desc': 'Graph that does not allow multiple edges',
+            
+            // 示例卡片 - MathJax
+            'math_title': 'Math Formula',
+            'math_desc': 'Mathematical formulas and expressions',
             
             // 提示消息
             'loading_diagram': 'Generating diagram...',
@@ -122,6 +176,8 @@ class LanguageSwitcher {
             'content_cleared': 'Content cleared',
             'example_loaded': '{0} example loaded',
             'renderer_error': 'Renderer {0} not available, using Mermaid renderer',
+            'renderer_changed': 'Switched to {0} renderer',
+            'edit_mode_changed': 'Switched to {0} edit mode',
             
             // 图像控制
             'zoom_in': 'Zoom In',

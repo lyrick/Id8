@@ -19,6 +19,8 @@
     <script src="js/toast.js"></script>
     <!-- 图表类型检测器 -->
     <script src="js/chart-type-detector.js"></script>
+    <!-- 全屏预览样式 -->
+    <link rel="stylesheet" href="css/fullscreen-preview.css">
 </head>
 <body>
     <div class="container">
@@ -30,6 +32,13 @@
         <div class="main-content">
             <!-- 层级导航将在这里动态生成 -->
 
+            <!-- 示例部分 -->
+            <div class="examples-section">
+                <h2 class="section-title">示例模板</h2>
+                <div class="examples-grid">
+                    <!-- 示例卡片将在这里动态生成 -->
+                </div>
+            </div>
 
             <div class="editor-container">
                 <div class="editor-section">
@@ -114,52 +123,6 @@ E --> |Y| G[支付成功]"></textarea>
                     </div>
                 </div>
             </div>
-
-            <div class="examples-section">
-                <h3 class="examples-title">示例模板</h3>
-                <div class="examples-grid">
-                    <div class="example-card" data-example="flowchart">
-                        <div class="example-header">
-                            <div class="example-title">基础流程图</div>
-                        </div>
-                        <div class="example-body">
-                            简单的流程图示例，包含开始、判断、处理和结束节点
-                        </div>
-                    </div>
-                    <div class="example-card" data-example="sequence">
-                        <div class="example-header">
-                            <div class="example-title">时序图</div>
-                        </div>
-                        <div class="example-body">
-                            展示系统组件之间交互的时序图
-                        </div>
-                    </div>
-                    <div class="example-card" data-example="state">
-                        <div class="example-header">
-                            <div class="example-title">状态图</div>
-                        </div>
-                        <div class="example-body">
-                            展示系统状态变化的状态图
-                        </div>
-                    </div>
-                    <div class="example-card" data-example="class">
-                        <div class="example-header">
-                            <div class="example-title">类图</div>
-                        </div>
-                        <div class="example-body">
-                            展示类之间关系的类图
-                        </div>
-                    </div>
-                    <div class="example-card" data-example="gantt">
-                        <div class="example-header">
-                            <div class="example-title">甘特图</div>
-                        </div>
-                        <div class="example-body">
-                            项目计划和时间管理图表
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <footer>
@@ -172,9 +135,13 @@ E --> |Y| G[支付成功]"></textarea>
     <script src="js/examples-extended.js"></script>
     <script src="js/examples-gantt.js"></script>
     <script src="js/renderers/renderer-manager.js"></script>
+    <script src="js/renderers/graphviz.js"></script>
+    <script src="js/renderers/plantuml.js"></script>
+    <script src="js/renderers/mathjax.js"></script>
     <script src="js/hierarchy-nav.js"></script>
     <script src="js/language-switcher.js"></script>
     <script src="js/image-controls.js"></script>
+    <script src="js/fullscreen-preview.js"></script>
     <script src="js/app-new.js"></script>
 </body>
 </html>
