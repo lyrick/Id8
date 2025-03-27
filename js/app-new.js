@@ -404,6 +404,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 创建新的渲染器管理器实例
                 const manager = new RendererManager();
                 window.rendererManager = manager;
+                
+                // 初始化各个渲染器实例并注册到全局
+                if (typeof PlantUMLRenderer === 'function') {
+                    window.plantumlRenderer = new PlantUMLRenderer();
+                    console.log('PlantUML渲染器实例已创建');
+                }
+                
+                if (typeof GraphvizRenderer === 'function') {
+                    window.graphvizRenderer = new GraphvizRenderer();
+                    console.log('Graphviz渲染器实例已创建');
+                }
+                
+                if (typeof MathJaxRenderer === 'function') {
+                    window.mathjaxRenderer = new MathJaxRenderer();
+                    console.log('MathJax渲染器实例已创建');
+                }
+                
+                if (typeof FlowchartJSRenderer === 'function') {
+                    window.FlowchartJSRenderer = FlowchartJSRenderer;
+                    console.log('FlowchartJS渲染器类已注册');
+                }
+                
                 return manager;
             } else {
                 // 动态加载渲染器管理器脚本
@@ -427,7 +449,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             securityLevel: 'loose',
                             er: {
                                 diagramPadding: 20,
-                                useMaxWidth: true
+                                useMaxWidth: true,
+                                entityPadding: 15,
+                                stroke: 'gray',
+                                fill: 'honeydew',
+                                fontSize: 12
                             }
                         });
                         return mermaid.render('mermaid-svg', code).then(result => {

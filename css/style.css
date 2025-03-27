@@ -175,6 +175,18 @@ textarea:focus {
     overflow: auto;
 }
 
+/* 渲染错误提示 */
+.render-error {
+    padding: 15px;
+    margin: 10px;
+    background-color: #fff0f0;
+    border-left: 4px solid #ff4444;
+    color: #cc0000;
+    font-family: monospace;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
 .controls {
     margin-top: 20px;
     display: flex;

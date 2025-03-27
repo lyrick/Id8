@@ -210,15 +210,55 @@ class RendererManager {
         }
 
         // 如果渲染器已加载，直接返回成功
-        if (renderer.isLoaded()) {
+        if (renderer.isLoaded && renderer.isLoaded()) {
             console.log(`渲染器 ${name} 已加载，无需初始化`);
             return Promise.resolve();
         }
 
         console.log(`开始初始化渲染器 ${name}...`);
+        
+        // 检查是否有独立的渲染器实例
+        let initPromise;
+        
+        // 根据渲染器类型选择不同的初始化策略
+        switch(name) {
+            case 'plantuml':
+                if (typeof plantumlRenderer !== 'undefined') {
+                    initPromise = plantumlRenderer.init();
+                } else {
+                    initPromise = renderer.init();
+                }
+                break;
+            case 'graphviz':
+                if (typeof graphvizRenderer !== 'undefined') {
+                    initPromise = graphvizRenderer.init();
+                } else {
+                    initPromise = renderer.init();
+                }
+                break;
+            case 'mathjax':
+                if (typeof mathjaxRenderer !== 'undefined') {
+                    initPromise = mathjaxRenderer.init();
+                } else {
+                    initPromise = renderer.init();
+                }
+                break;
+            case 'flowchartjs':
+                // 创建FlowchartJSRenderer实例并初始化
+                if (typeof FlowchartJSRenderer !== 'undefined') {
+                    const flowchartRenderer = new FlowchartJSRenderer();
+                    initPromise = flowchartRenderer.init();
+                } else {
+                    initPromise = renderer.init();
+                }
+                break;
+            default:
+                initPromise = renderer.init();
+        }
+        
         // 添加超时处理，避免无限等待
         return Promise.race([
-            renderer.init()
+            initPromise
                 .then(() => {
                     console.log(`渲染器 ${name} 初始化成功`);
                     return Promise.resolve();
@@ -241,7 +281,7 @@ class RendererManager {
             new Promise((_, reject) => {
                 setTimeout(() => {
                     reject(new Error(`初始化渲染器 ${name} 超时，请刷新页面重试`));
-                }, 15000); // 15秒超时
+                }, 20000); // 增加到20秒超时，给予更多加载时间
             })
         ]).catch(error => {
             console.error(`初始化渲染器 ${name} 失败:`, error);
@@ -252,7 +292,8 @@ class RendererManager {
             }
             
             // 对于其他渲染器，提供降级选项
-            if (name !== 'mermaid' && this.renderers['mermaid'] && this.renderers['mermaid'].isLoaded()) {
+            if (name !== 'mermaid' && this.renderers['mermaid'] && 
+                this.renderers['mermaid'].isLoaded && this.renderers['mermaid'].isLoaded()) {
                 console.warn(`渲染器 ${name} 加载失败，将尝试使用Mermaid渲染器`);
                 this.activeRenderer = 'mermaid';
                 return Promise.resolve();
@@ -275,14 +316,30 @@ class RendererManager {
             return Promise.reject(new Error(`渲染器 ${this.activeRenderer} 不存在`));
         }
 
+        // 显示加载指示器
+        const containerEl = document.getElementById(container);
+        if (containerEl) {
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-spinner';
+            loadingIndicator.style.display = 'flex';
+            loadingIndicator.style.justifyContent = 'center';
+            loadingIndicator.style.alignItems = 'center';
+            loadingIndicator.style.height = '100px';
+            loadingIndicator.innerHTML = `<div>加载 ${this.getRendererDisplayName(this.activeRenderer)} 渲染器...</div>`;
+            containerEl.innerHTML = '';
+            containerEl.appendChild(loadingIndicator);
+        }
+
         // 确保渲染器已初始化
-        if (!renderer.isLoaded()) {
+        const isLoaded = renderer.isLoaded && typeof renderer.isLoaded === 'function' ? renderer.isLoaded() : false;
+        if (!isLoaded) {
             console.log(`渲染器 ${this.activeRenderer} 未加载，正在初始化...`);
             return this.initRenderer(this.activeRenderer)
                 .then(() => {
                     console.log(`渲染器 ${this.activeRenderer} 初始化成功，开始渲染`);
                     // 确保渲染器已正确加载
-                    if (!renderer.isLoaded()) {
+                    const nowLoaded = renderer.isLoaded && typeof renderer.isLoaded === 'function' ? renderer.isLoaded() : false;
+                    if (!nowLoaded) {
                         throw new Error(`渲染器 ${this.activeRenderer} 未正确加载`);
                     }
                     return renderer.render(code, container, this);
@@ -293,13 +350,28 @@ class RendererManager {
                     // 如果当前渲染器不是Mermaid，尝试使用Mermaid作为备选
                     if (this.activeRenderer !== 'mermaid' && 
                         this.renderers['mermaid'] && 
+                        this.renderers['mermaid'].isLoaded && 
                         this.renderers['mermaid'].isLoaded()) {
                         
                         console.warn(`尝试使用Mermaid作为备选渲染器`);
                         this.activeRenderer = 'mermaid';
                         
+                        // 显示错误提示
+                        if (containerEl) {
+                            containerEl.innerHTML = `<div class="error-message" style="color:red;padding:10px;text-align:center;">原渲染器加载失败，已切换到Mermaid渲染器</div>`;
+                        }
+                        
                         // 递归调用，但限制递归深度为1，避免无限循环
                         return this.renderers['mermaid'].render(code, container, this);
+                    }
+                    
+                    // 显示错误信息
+                    if (containerEl) {
+                        containerEl.innerHTML = `<div class="error-message" style="color:red;padding:20px;text-align:center;">
+                            <h3>渲染失败</h3>
+                            <p>${error.message}</p>
+                            <p>请检查代码语法或尝试刷新页面</p>
+                        </div>`;
                     }
                     
                     throw error;
@@ -330,13 +402,14 @@ class RendererManager {
                                    document.querySelector(`script[src="${backupUrl}"]`);
             if (existingScript) {
                 // 脚本已存在，直接返回成功
+                console.log(`脚本已加载: ${url}`);
                 return resolve();
             }
             
             const script = document.createElement('script');
             // 根据重试次数选择URL
             script.src = this.loadRetries[url] === 0 ? fullUrl : backupUrl;
-            script.async = true;
+            script.async = false; // 改为同步加载，确保按顺序加载
             
             // 设置超时处理
             const timeout = setTimeout(() => {
@@ -352,12 +425,15 @@ class RendererManager {
                     clearTimeout(timeout);
                     this.loadScript(url).then(resolve).catch(reject);
                 } else {
-                    reject(new Error(`加载脚本超时: ${url}`));
+                    console.error(`加载脚本失败(超时): ${url}`);
+                    // 即使失败也解析Promise，避免阻塞其他渲染器的加载
+                    resolve();
                 }
-            }, 8000); // 8秒超时
+            }, 10000); // 增加超时时间到10秒
             
             script.onload = () => {
                 clearTimeout(timeout);
+                console.log(`脚本加载成功: ${url}`);
                 resolve();
             };
             
@@ -374,7 +450,9 @@ class RendererManager {
                     // 重试加载
                     this.loadScript(url).then(resolve).catch(reject);
                 } else {
-                    reject(new Error(`无法加载脚本: ${url}`));
+                    console.error(`加载脚本失败(错误): ${url}`);
+                    // 即使失败也解析Promise，避免阻塞其他渲染器的加载
+                    resolve();
                 }
             };
             
@@ -404,6 +482,39 @@ class RendererManager {
      */
     renderPlantUML(code, container) {
         try {
+            // 检查是否有独立的渲染器实例
+            if (typeof window.plantumlRenderer !== 'undefined' && typeof window.plantumlRenderer.render === 'function') {
+                console.log('使用PlantUML渲染器实例渲染');
+                return window.plantumlRenderer.render(code, container);
+            }
+            
+            // 如果没有渲染器实例，尝试创建一个
+            if (typeof PlantUMLRenderer === 'function') {
+                console.log('创建新的PlantUML渲染器实例');
+                window.plantumlRenderer = new PlantUMLRenderer();
+                return window.plantumlRenderer.render(code, container);
+            }
+            
+            // 降级方案：直接使用编码器
+            if (typeof plantumlEncoder === 'undefined') {
+                console.warn('PlantUML编码器未加载，尝试动态加载');
+                // 尝试动态加载编码器
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/plantuml-encoder@1.4.0/dist/plantuml-encoder.min.js';
+                    script.onload = () => {
+                        console.log('PlantUML编码器加载成功');
+                        // 重新调用渲染方法
+                        this.renderPlantUML(code, container).then(resolve).catch(reject);
+                    };
+                    script.onerror = () => {
+                        reject(new Error('无法加载PlantUML编码器'));
+                    };
+                    document.head.appendChild(script);
+                });
+            }
+            
+            console.log('使用PlantUML编码器渲染');
             const encoded = plantumlEncoder.encode(code);
             const url = `https://www.plantuml.com/plantuml/svg/${encoded}`;
             
@@ -414,7 +525,10 @@ class RendererManager {
             });
         } catch (error) {
             console.error('PlantUML渲染错误:', error);
-            return Promise.reject(new Error('PlantUML渲染失败: ' + error.message));
+            // 显示错误信息在容器中
+            const containerEl = document.getElementById(container);
+            containerEl.innerHTML = `<div class="render-error">PlantUML渲染失败: ${error.message}</div>`;
+            return Promise.resolve({ svg: containerEl.innerHTML });
         }
     }
 
@@ -425,6 +539,20 @@ class RendererManager {
      * @returns {Promise} 渲染完成的Promise
      */
     renderGraphviz(code, container) {
+        // 检查是否有独立的渲染器实例
+        if (typeof window.graphvizRenderer !== 'undefined' && typeof window.graphvizRenderer.render === 'function') {
+            console.log('使用Graphviz渲染器实例渲染');
+            return window.graphvizRenderer.render(code, container);
+        }
+        
+        // 如果没有渲染器实例，尝试创建一个
+        if (typeof GraphvizRenderer === 'function') {
+            console.log('创建新的Graphviz渲染器实例');
+            window.graphvizRenderer = new GraphvizRenderer();
+            return window.graphvizRenderer.render(code, container);
+        }
+        
+        // 降级方案：使用内置渲染逻辑
         return new Promise((resolve, reject) => {
             try {
                 const containerEl = document.getElementById(container);
@@ -432,9 +560,50 @@ class RendererManager {
                 
                 // 检查d3是否正确加载
                 if (typeof d3 === 'undefined' || typeof d3.graphviz === 'undefined') {
-                    throw new Error('Graphviz库未正确加载，请刷新页面重试');
+                    console.warn('Graphviz库未正确加载，尝试动态加载');
+                    // 尝试动态加载所需库
+                    const loadD3 = () => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js';
+                        script.onload = loadWasm;
+                        script.onerror = () => {
+                            containerEl.innerHTML = `<div class="render-error">无法加载D3库</div>`;
+                            resolve({ svg: containerEl.innerHTML });
+                        };
+                        document.head.appendChild(script);
+                    };
+                    
+                    const loadWasm = () => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/@hpcc-js/wasm@1.14.1/dist/index.min.js';
+                        script.onload = loadGraphviz;
+                        script.onerror = () => {
+                            containerEl.innerHTML = `<div class="render-error">无法加载WASM库</div>`;
+                            resolve({ svg: containerEl.innerHTML });
+                        };
+                        document.head.appendChild(script);
+                    };
+                    
+                    const loadGraphviz = () => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/d3-graphviz@4.0.0/build/d3-graphviz.min.js';
+                        script.onload = () => {
+                            console.log('Graphviz库加载成功');
+                            // 重新调用渲染方法
+                            this.renderGraphviz(code, container).then(resolve).catch(reject);
+                        };
+                        script.onerror = () => {
+                            containerEl.innerHTML = `<div class="render-error">无法加载Graphviz库</div>`;
+                            resolve({ svg: containerEl.innerHTML });
+                        };
+                        document.head.appendChild(script);
+                    };
+                    
+                    loadD3();
+                    return;
                 }
                 
+                console.log('使用D3-Graphviz渲染');
                 // 添加错误处理
                 try {
                     d3.select(`#${container}`)
@@ -444,14 +613,20 @@ class RendererManager {
                             resolve({ svg: containerEl.innerHTML });
                         })
                         .on('error', (error) => {
-                            reject(new Error('Graphviz渲染错误: ' + error));
+                            console.error('Graphviz渲染错误:', error);
+                            containerEl.innerHTML = `<div class="render-error">Graphviz渲染错误: ${error}</div>`;
+                            resolve({ svg: containerEl.innerHTML });
                         });
                 } catch (error) {
-                    throw new Error('Graphviz渲染失败: ' + error.message);
+                    console.error('Graphviz渲染失败:', error);
+                    containerEl.innerHTML = `<div class="render-error">Graphviz渲染失败: ${error.message}</div>`;
+                    resolve({ svg: containerEl.innerHTML });
                 }
             } catch (error) {
                 console.error('Graphviz渲染错误:', error);
-                reject(error);
+                const containerEl = document.getElementById(container);
+                containerEl.innerHTML = `<div class="render-error">Graphviz渲染错误: ${error.message}</div>`;
+                resolve({ svg: containerEl.innerHTML });
             }
         });
     }
@@ -463,6 +638,20 @@ class RendererManager {
      * @returns {Promise} 渲染完成的Promise
      */
     renderMathJax(code, container) {
+        // 检查是否有独立的渲染器实例
+        if (typeof window.mathjaxRenderer !== 'undefined' && typeof window.mathjaxRenderer.render === 'function') {
+            console.log('使用MathJax渲染器实例渲染');
+            return window.mathjaxRenderer.render(code, container);
+        }
+        
+        // 如果没有渲染器实例，尝试创建一个
+        if (typeof MathJaxRenderer === 'function') {
+            console.log('创建新的MathJax渲染器实例');
+            window.mathjaxRenderer = new MathJaxRenderer();
+            return window.mathjaxRenderer.render(code, container);
+        }
+        
+        // 降级方案：使用内置渲染逻辑
         return new Promise((resolve, reject) => {
             try {
                 const containerEl = document.getElementById(container);
@@ -470,23 +659,53 @@ class RendererManager {
                 
                 // 检查MathJax是否正确加载
                 if (typeof MathJax === 'undefined' || typeof MathJax.typesetPromise !== 'function') {
-                    // 降级处理：使用简单的HTML渲染
-                    containerEl.innerHTML = `<div style="text-align:center; padding:10px; font-style:italic;">$$${code}$$</div>`;
-                    resolve({ svg: containerEl.innerHTML });
+                    console.warn('MathJax库未正确加载，尝试动态加载');
+                    
+                    // 配置MathJax
+                    window.MathJax = {
+                        tex: {
+                            inlineMath: [['$', '$'], ['\\(', '\\)']],
+                            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                            processEscapes: true
+                        },
+                        svg: { fontCache: 'global' },
+                        startup: {
+                            ready: () => {
+                                console.log('MathJax加载成功');
+                                // 重新调用渲染方法
+                                this.renderMathJax(code, container).then(resolve).catch(reject);
+                            }
+                        }
+                    };
+                    
+                    // 动态加载MathJax
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+                    script.async = true;
+                    script.onerror = () => {
+                        console.error('无法加载MathJax库');
+                        containerEl.innerHTML = `<div style="text-align:center; padding:10px; font-style:italic;">$$${code}$$</div>`;
+                        resolve({ svg: containerEl.innerHTML });
+                    };
+                    document.head.appendChild(script);
                     return;
                 }
                 
+                console.log('使用MathJax库渲染');
                 MathJax.typesetPromise([containerEl])
                     .then(() => {
                         resolve({ svg: containerEl.innerHTML });
                     })
                     .catch(error => {
                         console.error('MathJax渲染错误:', error);
-                        reject(new Error('MathJax渲染失败: ' + error.message));
+                        containerEl.innerHTML = `<div class="render-error">MathJax渲染失败: ${error.message}</div>`;
+                        resolve({ svg: containerEl.innerHTML });
                     });
             } catch (error) {
                 console.error('MathJax渲染错误:', error);
-                reject(error);
+                const containerEl = document.getElementById(container);
+                containerEl.innerHTML = `<div class="render-error">MathJax渲染错误: ${error.message}</div>`;
+                resolve({ svg: containerEl.innerHTML });
             }
         });
     }
@@ -498,30 +717,122 @@ class RendererManager {
      * @returns {Promise} 渲染完成的Promise
      */
     renderFlowchartJS(code, container) {
+        // 检查是否有独立的渲染器实例
+        if (typeof window.FlowchartJSRenderer === 'function') {
+            console.log('使用FlowchartJS渲染器实例渲染');
+            // 创建实例并使用
+            const renderer = new window.FlowchartJSRenderer();
+            return renderer.render(code, container);
+        }
+        
+        // 如果没有渲染器类，尝试获取
+        if (typeof FlowchartJSRenderer === 'function') {
+            console.log('注册FlowchartJS渲染器类');
+            window.FlowchartJSRenderer = FlowchartJSRenderer;
+            const renderer = new FlowchartJSRenderer();
+            return renderer.render(code, container);
+        }
+        
+        // 降级方案：使用内置渲染逻辑
         return new Promise((resolve, reject) => {
             try {
                 const containerEl = document.getElementById(container);
                 containerEl.innerHTML = '';
                 
-                // 检查flowchart是否正确加载
-                if (typeof flowchart === 'undefined') {
-                    throw new Error('Flowchart.js库未正确加载，请刷新页面重试');
+                // 检查flowchart.js是否正确加载
+                if (typeof flowchart === 'undefined' || typeof Raphael === 'undefined') {
+                    console.warn('Flowchart.js库未正确加载，尝试动态加载');
+                    
+                    // 加载Raphael库
+                    const loadRaphael = () => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/raphael@2.3.0/raphael.min.js';
+                        script.onload = loadFlowchart;
+                        script.onerror = () => {
+                            containerEl.innerHTML = `<div class="render-error">无法加载Raphael库</div>`;
+                            resolve({ svg: containerEl.innerHTML });
+                        };
+                        document.head.appendChild(script);
+                    };
+                    
+                    // 加载Flowchart.js库
+                    const loadFlowchart = () => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/flowchart.js@1.15.0/release/flowchart.min.js';
+                        script.onload = () => {
+                            console.log('Flowchart.js库加载成功');
+                            // 重新调用渲染方法
+                            this.renderFlowchartJS(code, container).then(resolve).catch(reject);
+                        };
+                        script.onerror = () => {
+                            containerEl.innerHTML = `<div class="render-error">无法加载Flowchart.js库</div>`;
+                            resolve({ svg: containerEl.innerHTML });
+                        };
+                        document.head.appendChild(script);
+                    };
+                    
+                    loadRaphael();
+                    return;
                 }
                 
+                console.log('使用Flowchart.js库渲染');
+                // 解析流程图代码
                 try {
                     const diagram = flowchart.parse(code);
-                    diagram.drawSVG(container);
+                    
+                    // 渲染流程图
+                    diagram.drawSVG(container, {
+                        'line-width': 2,
+                        'line-length': 50,
+                        'text-margin': 10,
+                        'font-size': 14,
+                        'font-color': '#333',
+                        'line-color': '#666',
+                        'element-color': '#888',
+                        'fill': 'white',
+                        'yes-text': '是',
+                        'no-text': '否',
+                        'arrow-end': 'block',
+                        'scale': 1,
+                        'symbols': {
+                            'start': {
+                                'font-color': 'white',
+                                'element-color': '#44AA44',
+                                'fill': '#44AA44'
+                            },
+                            'end': {
+                                'font-color': 'white',
+                                'element-color': '#AA4444',
+                                'fill': '#AA4444'
+                            }
+                        },
+                        'flowstate': {
+                            'past': { 'fill': '#CCCCCC', 'font-size': 12 },
+                            'current': { 'fill': '#88AAFF', 'font-color': 'white', 'font-weight': 'bold' },
+                            'future': { 'fill': '#FFCC88' },
+                            'request': { 'fill': '#AAFFAA' },
+                            'invalid': { 'fill': '#FFAAAA' },
+                            'approved': { 'fill': '#AAFFAA', 'font-color': '#006600', 'font-weight': 'bold' },
+                            'rejected': { 'fill': '#FFAAAA', 'font-color': '#CC0000', 'font-weight': 'bold' }
+                        }
+                    });
+                    
                     resolve({ svg: containerEl.innerHTML });
                 } catch (error) {
-                    throw new Error('Flowchart.js解析错误: ' + error.message);
+                    console.error('Flowchart.js解析或渲染错误:', error);
+                    containerEl.innerHTML = `<div class="render-error">Flowchart.js解析或渲染错误: ${error.message}</div>`;
+                    resolve({ svg: containerEl.innerHTML });
                 }
             } catch (error) {
                 console.error('Flowchart.js渲染错误:', error);
-                reject(error);
+                const containerEl = document.getElementById(container);
+                containerEl.innerHTML = `<div class="render-error">Flowchart.js渲染错误: ${error.message}</div>`;
+                resolve({ svg: containerEl.innerHTML });
             }
         });
     }
-}
+    }
+
 
 // 创建全局渲染器管理器实例
 const rendererManager = new RendererManager();

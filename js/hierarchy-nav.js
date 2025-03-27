@@ -306,6 +306,7 @@ class HierarchyNavigation {
     setActiveRenderer(renderer) {
         if (this.activeRenderer === renderer) return;
         
+        const previousRenderer = this.activeRenderer;
         this.activeRenderer = renderer;
         
         // 更新UI
@@ -319,6 +320,11 @@ class HierarchyNavigation {
         
         // 确保渲染器管理器已初始化
         if (this.rendererManager && typeof this.rendererManager.setActiveRenderer === 'function') {
+            // 显示加载提示
+            if (typeof toast !== 'undefined') {
+                toast.info(`正在加载 ${this.getRendererDisplayName(renderer)} 渲染器...`);
+            }
+            
             // 初始化渲染器
             this.rendererManager.initRenderer(renderer)
                 .then(() => {
@@ -328,12 +334,18 @@ class HierarchyNavigation {
                     
                     // 更新示例卡片
                     this.updateExampleCards();
+                    
+                    // 显示成功提示
+                    if (typeof toast !== 'undefined') {
+                        toast.success(`${this.getRendererDisplayName(renderer)} 渲染器已加载`);
+                    }
                 })
                 .catch(error => {
                     console.error(`初始化渲染器 ${renderer} 失败:`, error);
                     // 如果初始化失败，尝试使用默认的Mermaid渲染器
                     this.activeRenderer = 'mermaid';
                     this.rendererManager.setActiveRenderer('mermaid');
+                    
                     // 更新UI显示
                     document.querySelectorAll('.level2-option').forEach(option => {
                         option.classList.toggle('active', option.dataset.renderer === 'mermaid');
@@ -343,7 +355,9 @@ class HierarchyNavigation {
                     this.updateExampleCards();
                     
                     // 显示错误提示
-                    toast.error(`渲染器 ${renderer} 不可用，使用Mermaid渲染器`);
+                    if (typeof toast !== 'undefined') {
+                        toast.error(`${this.getRendererDisplayName(renderer)} 渲染器加载失败，已切换到Mermaid渲染器`);
+                    }
                 });
         }
         
@@ -351,8 +365,8 @@ class HierarchyNavigation {
         this.updateChartTypeOptions();
         
         // 重置图表类型为当前渲染器的第一个支持类型
-        if (this.rendererManager && this.rendererManager.renderers[renderer]) {
-            const supportedTypes = this.rendererManager.renderers[renderer].supportedTypes;
+        if (this.rendererManager && this.rendererManager.renderers[this.activeRenderer]) {
+            const supportedTypes = this.rendererManager.renderers[this.activeRenderer].supportedTypes;
             if (supportedTypes && supportedTypes.length > 0) {
                 this.setActiveChartType(supportedTypes[0].id);
             }
@@ -360,6 +374,22 @@ class HierarchyNavigation {
         
         // 触发变更回调
         this.triggerChangeCallbacks();
+    }
+    
+    /**
+     * 获取渲染器显示名称
+     * @param {string} rendererId - 渲染器ID
+     * @returns {string} 渲染器显示名称
+     */
+    getRendererDisplayName(rendererId) {
+        const displayNames = {
+            'mermaid': 'Mermaid',
+            'plantuml': 'PlantUML',
+            'graphviz': 'Graphviz',
+            'mathjax': 'MathJax',
+            'flowchartjs': 'Flowchart.js'
+        };
+        return displayNames[rendererId] || rendererId;
     }
 
     /**
