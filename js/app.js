@@ -229,17 +229,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 处理渲染错误的函数
     function handleRenderError(error, loadingToast) {
-        // 仅在控制台记录错误，不显示给用户
         console.error('Mermaid渲染错误:', error);
         
         // 隐藏加载提示
         if (loadingToast) loadingToast.hide();
         
-        // 显示友好的toast提示
-        toast.error('流程图生成失败，请检查语法', 5000);
+        // 显示错误提示
+        toast.error('流程图生成失败，请检查语法');
         
-        // 在预览区域显示友好的提示，而不是错误详情
-        mermaidDiagram.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">请检查流程图代码并重试</div>';
+        // 在预览区域显示错误信息
+        mermaidDiagram.innerHTML = `<div style="color: #ff4444; padding: 10px; background-color: #ffe6e6; border-radius: 4px;">
+            <strong>错误:</strong> ${error.message || '流程图语法错误，请检查您的代码'}
+        </div>`;
         
         // 恢复按钮状态
         generateBtn.disabled = false;

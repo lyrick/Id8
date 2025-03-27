@@ -178,17 +178,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // 实体名称语法验证 - 不直接抛出错误，而是通过错误处理机制处理
-        try {
-            const chineseEntityPattern = /[\u4e00-\u9fa5]/;
-            if (code.includes('erDiagram') && chineseEntityPattern.test(code)) {
-                // 创建错误对象但不直接抛出，而是通过错误处理函数处理
-                const erError = new Error('ER图语法错误');
-                return handleRenderError(erError, loadingToast);
-            }
-        } catch (validationError) {
-            // 如果验证过程中出现任何错误，也通过错误处理函数处理
-            return handleRenderError(validationError, loadingToast);
+        // 实体名称语法验证
+        const chineseEntityPattern = /[\u4e00-\u9fa5]/;
+        if (code.includes('erDiagram') && chineseEntityPattern.test(code)) {
+            throw new Error('ER图实体名称必须使用英文命名(如Customer/Order)\n正确格式示例：\nerDiagram\n  CUSTOMER ||--o{ ORDER : places\n  ORDER ||--|{ LINE-ITEM : contains\n\n• 请使用下划线替代中文和特殊字符\n• 关系描述使用英文动词短语')
         }
         
         // 获取当前层级导航状态
@@ -264,8 +257,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 处理渲染错误的函数
     function handleRenderError(error, loadingToast) {
-        // 仅在控制台记录错误，不显示给用户
         console.error('图表渲染错误:', error);
+    toast.error(`ER图语法错误: ${error.message.split('\n')[0]}`, 5000);
         
         // 隐藏加载提示
         if (loadingToast) loadingToast.hide();
@@ -277,33 +270,37 @@ document.addEventListener('DOMContentLoaded', function() {
         // 针对特定错误提供更友好的提示
         if (errorMessage.includes('Invalid date:Milestone')) {
             errorMessage = '甘特图日期格式错误';
-            errorTip = '里程碑应使用正确的日期格式';
+            errorTip = '提示：里程碑应使用格式 "milestone, after taskId, 0d"，确保日期格式为 YYYY-MM-DD';
         } else if (errorMessage.includes('无法加载脚本')) {
             errorMessage = '外部库加载失败';
-            errorTip = '请稍后再试';
+            errorTip = '提示：正在尝试使用备用源加载，请稍后再试，或尝试使用其他渲染器';
         } else if (errorMessage.includes('库未正确加载')) {
             errorMessage = '渲染库加载失败';
-            errorTip = '请刷新页面重试';
+            errorTip = '提示：请刷新页面重试，或尝试使用其他渲染器（如Mermaid）';
         } else if (errorMessage.includes('渲染失败')) {
-            errorMessage = '图表渲染失败';
-            errorTip = '请检查语法是否正确';
+            // 保留原始错误信息
+            errorTip = '提示：请检查语法是否正确，或尝试使用其他渲染器';
         } else if (errorMessage.includes('加载脚本超时')) {
             errorMessage = '网络连接缓慢，加载超时';
-            errorTip = '请检查网络连接';
-        } else if (errorMessage.includes('erDiagram')) {
-            errorMessage = 'ER图语法错误';
-            errorTip = '请检查ER图语法格式';
+            errorTip = '提示：请检查网络连接，或尝试使用已加载的渲染器（如Mermaid）';
         }
         
-        // 只显示友好的toast提示，不在页面上显示详细错误
-        if (errorTip) {
-            toast.error(`${errorMessage}：${errorTip}`, 5000);
+        // 显示错误提示
+        toast.error(`流程图生成失败: ${errorMessage}`);
+        
+        // 在预览区域显示错误信息
+        if (error.message.includes('erDiagram')) {
+            mermaidDiagram.innerHTML = `<div style="color: #ff4444; padding: 10px; background-color: #ffe6e6; border-radius: 4px;">
+                <strong>错误:</strong> ${error.message || 'ER图语法错误，请检查您的代码'}
+                <p style="margin-top: 12px; font-size: 13px;">建议使用以下格式：\nerDiagram\n  实体1 ||--o{ 实体2 : 关系</p>
+            </div>`;
         } else {
-            toast.error(`流程图生成失败，请检查语法`, 5000);
+            mermaidDiagram.innerHTML = `<div style="color: #ff4444; padding: 10px; background-color: #ffe6e6; border-radius: 4px;">
+                <strong>错误:</strong> ${errorMessage}
+                ${errorTip ? `<p style="margin-top: 8px; font-size: 14px;">${errorTip}</p>` : ''}
+                <p style="margin-top: 12px; font-size: 13px;">建议使用Mermaid渲染器，它已预加载并更稳定</p>
+            </div>`;
         }
-        
-        // 在预览区域显示友好的提示，而不是错误详情
-        mermaidDiagram.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">请检查流程图代码并重试</div>';
         
         // 恢复按钮状态
         generateBtn.disabled = false;
