@@ -135,10 +135,15 @@ class MathJaxRenderer {
                 formulaContainer.style.minHeight = '200px';
                 
                 // 添加公式
-                // 根据公式是否包含换行符决定使用行内公式还是块级公式
-                if (code.includes('\n')) {
+                // 检查是否已经包含了数学环境标记
+                if (code.includes('\\begin{') || code.includes('$$')) {
+                    // 已经包含数学环境标记，直接使用
+                    formulaContainer.innerHTML = code;
+                } else if (code.includes('\n')) {
+                    // 多行公式使用块级公式
                     formulaContainer.innerHTML = `$$${code}$$`;
                 } else {
+                    // 单行公式使用行内公式
                     formulaContainer.innerHTML = `$$${code}$$`;
                 }
                 

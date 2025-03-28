@@ -112,29 +112,53 @@ class GraphvizRenderer {
 
                 // 使用d3-graphviz渲染DOT代码
                 try {
-                    const graphviz = d3.select(`#${containerId}`).graphviz()
+                    // 确保容器有足够的高度
+                    container.style.minHeight = '300px';
+                    
+                    // 创建一个新的div作为渲染容器，避免ID选择器问题
+                    const renderDiv = document.createElement('div');
+                    renderDiv.id = `graphviz-render-${Date.now()}`;
+                    renderDiv.style.width = '100%';
+                    renderDiv.style.height = '100%';
+                    container.appendChild(renderDiv);
+                    
+                    const graphviz = d3.select(`#${renderDiv.id}`).graphviz()
                         .zoom(true) // 启用缩放
                         .fit(true)  // 自适应容器大小
                         .scale(1.0) // 初始缩放比例
                         .width(container.clientWidth)
-                        .height(container.clientHeight)
+                        .height(container.clientHeight || 400)
                         .transition(() => {
                             return d3.transition("main")
                                 .ease(d3.easeLinear)
                                 .duration(500);
                         });
 
-                    // 移除加载指示器
-                    container.removeChild(loadingIndicator);
-
                     // 渲染图表
                     graphviz.renderDot(code)
                         .on('end', () => {
+                            // 移除加载指示器
+                            if (container.contains(loadingIndicator)) {
+                                container.removeChild(loadingIndicator);
+                            }
                             resolve({ svg: container.innerHTML });
                         })
                         .on('error', (error) => {
                             console.error('Graphviz渲染错误:', error);
-                            reject(new Error('Graphviz语法错误: ' + error));
+                            // 移除加载指示器
+                            if (container.contains(loadingIndicator)) {
+                                container.removeChild(loadingIndicator);
+                            }
+                            // 显示错误信息
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'render-error';
+                            errorDiv.style.color = '#ff4444';
+                            errorDiv.style.padding = '10px';
+                            errorDiv.style.backgroundColor = '#ffe6e6';
+                            errorDiv.style.borderRadius = '4px';
+                            errorDiv.innerHTML = `<strong>Graphviz语法错误:</strong> ${error}`;
+                            container.appendChild(errorDiv);
+                            resolve({ svg: container.innerHTML }); // 解析Promise而不是拒绝，以便显示错误信息
                         });
                 } catch (error) {
                     // 移除加载指示器

@@ -35,6 +35,18 @@ class RendererManager {
                         axisFormat: '%Y-%m-%d',
                         // 禁用里程碑特殊处理，避免日期格式错误
                         displayMode: 'compact'
+                    },
+                    er: {
+                        // ER图配置
+                        diagramPadding: 20,
+                        layoutDirection: 'TB',
+                        minEntityWidth: 100,
+                        minEntityHeight: 75,
+                        entityPadding: 15,
+                        stroke: 'gray',
+                        fill: 'honeydew',
+                        fontSize: 12,
+                        useMaxWidth: true
                     }
                 });
                 return Promise.resolve();
@@ -606,15 +618,26 @@ class RendererManager {
                 console.log('使用D3-Graphviz渲染');
                 // 添加错误处理
                 try {
-                    d3.select(`#${container}`)
+                    // 创建一个新的div作为渲染容器，避免ID选择器问题
+                    const renderDiv = document.createElement('div');
+                    renderDiv.id = `graphviz-render-${Date.now()}`;
+                    renderDiv.style.width = '100%';
+                    renderDiv.style.height = '100%';
+                    containerEl.appendChild(renderDiv);
+                    
+                    d3.select(`#${renderDiv.id}`)
                         .graphviz()
+                        .zoom(true)
+                        .fit(true)
+                        .width(containerEl.clientWidth || 500)
+                        .height(containerEl.clientHeight || 400)
                         .renderDot(code)
                         .on('end', () => {
                             resolve({ svg: containerEl.innerHTML });
                         })
                         .on('error', (error) => {
                             console.error('Graphviz渲染错误:', error);
-                            containerEl.innerHTML = `<div class="render-error">Graphviz渲染错误: ${error}</div>`;
+                            containerEl.innerHTML = `<div class="render-error" style="color: #ff4444; padding: 10px; background-color: #ffe6e6; border-radius: 4px;"><strong>Graphviz渲染错误:</strong> ${error}</div>`;
                             resolve({ svg: containerEl.innerHTML });
                         });
                 } catch (error) {
@@ -655,7 +678,30 @@ class RendererManager {
         return new Promise((resolve, reject) => {
             try {
                 const containerEl = document.getElementById(container);
-                containerEl.innerHTML = `$$${code}$$`;
+                
+                // 创建公式容器
+                const formulaContainer = document.createElement('div');
+                formulaContainer.className = 'math-formula';
+                formulaContainer.style.display = 'flex';
+                formulaContainer.style.justifyContent = 'center';
+                formulaContainer.style.alignItems = 'center';
+                formulaContainer.style.padding = '20px';
+                
+                // 添加公式
+                // 检查是否已经包含了数学环境标记
+                if (code.includes('\\begin{') || code.includes('$$')) {
+                    // 已经包含数学环境标记，直接使用
+                    formulaContainer.innerHTML = code;
+                } else if (code.includes('\n')) {
+                    // 多行公式使用块级公式
+                    formulaContainer.innerHTML = `$$${code}$$`;
+                } else {
+                    // 单行公式使用行内公式
+                    formulaContainer.innerHTML = `$$${code}$$`;
+                }
+                
+                containerEl.innerHTML = '';
+                containerEl.appendChild(formulaContainer);
                 
                 // 检查MathJax是否正确加载
                 if (typeof MathJax === 'undefined' || typeof MathJax.typesetPromise !== 'function') {
@@ -666,10 +712,12 @@ class RendererManager {
                         tex: {
                             inlineMath: [['$', '$'], ['\\(', '\\)']],
                             displayMath: [['$$', '$$'], ['\\[', '\\]']],
-                            processEscapes: true
+                            processEscapes: true,
+                            processEnvironments: true
                         },
                         svg: { fontCache: 'global' },
                         startup: {
+                            typeset: false,
                             ready: () => {
                                 console.log('MathJax加载成功');
                                 // 重新调用渲染方法
@@ -681,7 +729,7 @@ class RendererManager {
                     // 动态加载MathJax
                     const script = document.createElement('script');
                     script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
-                    script.async = true;
+                    script.async = false;
                     script.onerror = () => {
                         console.error('无法加载MathJax库');
                         containerEl.innerHTML = `<div style="text-align:center; padding:10px; font-style:italic;">$$${code}$$</div>`;
@@ -692,7 +740,8 @@ class RendererManager {
                 }
                 
                 console.log('使用MathJax库渲染');
-                MathJax.typesetPromise([containerEl])
+                // 使用MathJax渲染公式，确保传入正确的DOM元素
+                MathJax.typesetPromise([formulaContainer])
                     .then(() => {
                         resolve({ svg: containerEl.innerHTML });
                     })
@@ -832,7 +881,6 @@ class RendererManager {
         });
     }
     }
-
 
 // 创建全局渲染器管理器实例
 const rendererManager = new RendererManager();
