@@ -71,7 +71,7 @@ class ChartTypeDetector {
             
             // MathJax
             'math': {
-                regex: /^\s*\\begin\{(equation|align|matrix|pmatrix|bmatrix|vmatrix)\}/i,
+                regex: /^\s*(\$\$|\\begin\{(equation|align|matrix|pmatrix|bmatrix|vmatrix)\})/i,
                 priority: 5
             }
         };

@@ -155,9 +155,16 @@ class ImageControls {
      */
     toggleLayout() {
         this.isHorizontalLayout = !this.isHorizontalLayout;
+        console.log('切换布局:', this.isHorizontalLayout ? '横向' : '纵向');
         
         // 更新预览容器类名
-        this.previewContainer.classList.toggle('vertical-layout', !this.isHorizontalLayout);
+        if (this.isHorizontalLayout) {
+            this.previewContainer.classList.remove('vertical-layout');
+            console.log('移除vertical-layout类');
+        } else {
+            this.previewContainer.classList.add('vertical-layout');
+            console.log('添加vertical-layout类');
+        }
         
         // 添加微动效
         const toggleBtn = document.getElementById('toggle-layout');
@@ -199,38 +206,36 @@ class ImageControls {
         
         // 鼠标按下事件
         this.previewContainer.addEventListener('mousedown', (e) => {
-            // 仅在缩放级别大于1时允许拖动
-            if (this.zoomLevel > 1) {
+            // 仅在按住Alt键时允许拖动
+            if (e.altKey) {
                 isDragging = true;
                 startX = e.clientX - translateX;
                 startY = e.clientY - translateY;
-                this.previewContainer.style.cursor = 'grabbing';
+                this.previewContainer.style.cursor = 'move';
             }
         });
         
         // 鼠标移动事件
         document.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                translateX = e.clientX - startX;
-                translateY = e.clientY - startY;
-                this.diagramContainer.style.transform = `scale(${this.zoomLevel}) translate(${translateX / this.zoomLevel}px, ${translateY / this.zoomLevel}px)`;
-            }
+            if (!isDragging) return;
+            
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            
+            // 应用拖动位置
+            this.diagramContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${this.zoomLevel})`;
         });
         
         // 鼠标释放事件
         document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                this.previewContainer.style.cursor = 'default';
-            }
+            isDragging = false;
+            this.previewContainer.style.cursor = 'default';
         });
         
         // 鼠标离开事件
-        this.previewContainer.addEventListener('mouseleave', () => {
-            if (isDragging) {
-                isDragging = false;
-                this.previewContainer.style.cursor = 'default';
-            }
+        document.addEventListener('mouseleave', () => {
+            isDragging = false;
+            this.previewContainer.style.cursor = 'default';
         });
     }
 }

@@ -76,10 +76,10 @@ const extendedExamples = {
         
         // ER图示例
         er: `erDiagram
-    客户 ||--o{ 订单 : 下单
-    订单 ||--|{ 订单项 : 包含
-    订单 }|--|| 支付 : 关联
-    产品 ||--o{ 订单项 : 选择`,
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ ORDER_ITEM : contains
+    ORDER }|--|| PAYMENT : associates
+    PRODUCT ||--o{ ORDER_ITEM : includes`,
         
         // 用户旅程图示例
         journey: `journey
@@ -258,12 +258,12 @@ state 处理中 {
     graphviz: {
         // 有向图示例
         digraph: `digraph G {
-    // 图形属性
+    /* 图形属性 */
     graph [rankdir=LR, fontname="Arial", fontsize=12];
     node [shape=box, style=filled, fillcolor=lightblue, fontname="Arial", fontsize=10];
     edge [fontname="Arial", fontsize=9];
     
-    // 节点定义
+    /* 节点定义 */
     A [label="开始"];
     B [label="处理数据", fillcolor=lightgreen];
     C [label="验证结果", shape=diamond, fillcolor=lightyellow];
@@ -271,7 +271,7 @@ state 处理中 {
     E [label="错误处理", fillcolor=lightpink];
     F [label="结束"];
     
-    // 边定义
+    /* 边定义 */
     A -> B [label="输入数据"];
     B -> C [label="处理完成"];
     C -> D [label="验证通过", color=green];
@@ -282,19 +282,19 @@ state 处理中 {
         
         // 无向图示例
         graph: `graph G {
-    // 图形属性
+    /* 图形属性 */
     graph [fontname="Arial", fontsize=12];
     node [shape=circle, style=filled, fillcolor=lightblue, fontname="Arial", fontsize=10];
     edge [fontname="Arial", fontsize=9];
     
-    // 节点定义
+    /* 节点定义 */
     A [label="用户A"];
     B [label="用户B"];
     C [label="用户C"];
     D [label="用户D"];
     E [label="用户E"];
     
-    // 边定义 - 社交网络关系
+    /* 边定义 - 社交网络关系 */
     A -- B [label="朋友"];
     A -- C [label="朋友"];
     B -- C [label="朋友"];
@@ -306,12 +306,12 @@ state 处理中 {
         
         // 严格图示例
         strict: `strict digraph G {
-    // 图形属性
+    /* 图形属性 */
     graph [rankdir=TB, fontname="Arial", fontsize=12];
     node [shape=box, style=filled, fillcolor=lightblue, fontname="Arial", fontsize=10];
     edge [fontname="Arial", fontsize=9];
     
-    // 节点定义 - 组织结构
+    /* 节点定义 - 组织结构 */
     CEO [label="CEO", fillcolor=gold];
     CTO [label="CTO", fillcolor=lightgreen];
     CFO [label="CFO", fillcolor=lightgreen];
@@ -322,7 +322,7 @@ state 处理中 {
     DEV3 [label="开发者3"];
     DEV4 [label="开发者4"];
     
-    // 边定义 - 汇报关系
+    /* 边定义 - 汇报关系 */
     CEO -> CTO;
     CEO -> CFO;
     CTO -> PM1;
@@ -337,11 +337,11 @@ state 处理中 {
     // MathJax示例
     mathjax: {
         // 数学公式示例
-        math: `\begin{align}
+        math: `$$\begin{align}
     E &= mc^2 \\
     \frac{\partial f}{\partial x} &= 2x + y \\
     \int_{a}^{b} f(x) dx &= F(b) - F(a) \\
     \sum_{i=1}^{n} i &= \frac{n(n+1)}{2}
-\end{align}`
+\end{align}$$`
     }
 };

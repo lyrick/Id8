@@ -34,7 +34,11 @@ class MathJaxRenderer {
             },
             svg: { fontCache: 'global' },
             startup: {
-                typeset: false // 禁用自动排版，我们将手动控制
+                typeset: false, // 禁用自动排版，我们将手动控制
+                ready: () => {
+                    console.log('MathJax准备就绪');
+                    // 这里不需要做任何事情，只是确保ready事件被捕获
+                }
             }
         };
         
@@ -43,17 +47,22 @@ class MathJaxRenderer {
             .then(() => {
                 // 确保MathJax已完全加载
                 return new Promise(resolve => {
+                    // 检查MathJax是否已经可用
                     if (typeof MathJax !== 'undefined' && typeof MathJax.typesetPromise === 'function') {
+                        console.log('MathJax已加载并准备就绪');
                         resolve();
-                    } else {
-                        // 如果MathJax尚未完全初始化，等待startup.ready事件
-                        window.MathJax.startup = window.MathJax.startup || {};
-                        const originalReady = window.MathJax.startup.ready;
-                        window.MathJax.startup.ready = () => {
-                            if (originalReady) originalReady();
-                            resolve();
-                        };
+                        return;
                     }
+                    
+                    // 如果MathJax尚未完全初始化，等待startup.ready事件
+                    console.log('等待MathJax初始化完成...');
+                    window.MathJax.startup = window.MathJax.startup || {};
+                    const originalReady = window.MathJax.startup.ready;
+                    window.MathJax.startup.ready = () => {
+                        if (originalReady) originalReady();
+                        console.log('MathJax初始化完成');
+                        resolve();
+                    };
                 });
             })
             .then(() => {
@@ -79,15 +88,25 @@ class MathJaxRenderer {
             // 检查脚本是否已加载
             const existingScript = document.querySelector(`script[src="${url}"]`);
             if (existingScript) {
-                return resolve();
+                console.log(`脚本已存在: ${url}`);
+                // 如果脚本已加载但可能尚未执行完成，我们等待一小段时间
+                setTimeout(resolve, 100);
+                return;
             }
             
+            console.log(`加载脚本: ${url}`);
             const script = document.createElement('script');
             script.src = url;
             script.async = true;
             
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error(`无法加载脚本: ${url}`));
+            script.onload = () => {
+                console.log(`脚本加载成功: ${url}`);
+                resolve();
+            };
+            script.onerror = (e) => {
+                console.error(`脚本加载失败: ${url}`, e);
+                reject(new Error(`无法加载脚本: ${url}`));
+            };
             
             document.head.appendChild(script);
         });
@@ -102,8 +121,11 @@ class MathJaxRenderer {
     render(code, containerId) {
         return new Promise((resolve, reject) => {
             try {
+                console.log(`开始渲染公式到容器: ${containerId}`);
+                
                 // 确保渲染器已初始化
                 if (!this.initialized) {
+                    console.log('渲染器尚未初始化，先进行初始化');
                     return this.init().then(() => this.render(code, containerId)).then(resolve).catch(reject);
                 }
 
@@ -120,9 +142,16 @@ class MathJaxRenderer {
                 loadingIndicator.className = 'loading-spinner';
                 container.appendChild(loadingIndicator);
 
-                // 检查MathJax是否正确加载
-                if (typeof MathJax === 'undefined' || typeof MathJax.typesetPromise !== 'function') {
-                    throw new Error('MathJax库未正确加载');
+                // 再次检查MathJax是否正确加载
+                if (typeof MathJax === 'undefined') {
+                    console.error('MathJax未定义，尝试重新初始化');
+                    this.initialized = false;
+                    return this.init().then(() => this.render(code, containerId)).then(resolve).catch(reject);
+                }
+                
+                if (typeof MathJax.typesetPromise !== 'function') {
+                    console.error('MathJax.typesetPromise不是函数，MathJax未完全加载');
+                    throw new Error('MathJax库未正确加载，请刷新页面重试');
                 }
 
                 // 创建公式容器
@@ -154,18 +183,29 @@ class MathJaxRenderer {
                     container.removeChild(loadingIndicator);
                 }
                 
+                console.log('调用MathJax.typesetPromise进行渲染');
                 // 使用MathJax渲染公式
                 MathJax.typesetPromise([formulaContainer])
                     .then(() => {
+                        console.log('MathJax渲染成功');
                         resolve({ svg: container.innerHTML });
                     })
                     .catch(error => {
                         console.error('MathJax渲染错误:', error);
-                        reject(new Error('MathJax渲染失败: ' + error.message));
+                        // 添加友好的错误提示
+                        container.innerHTML = `<div class="render-error" style="color:red; padding:10px;">MathJax渲染失败: ${error.message}</div>`;
+                        // 我们仍然解析Promise而不是拒绝，这样UI不会崩溃
+                        resolve({ svg: container.innerHTML });
                     });
             } catch (error) {
                 console.error('MathJax渲染错误:', error);
-                reject(error);
+                // 尝试提供有用的错误信息
+                const container = document.getElementById(containerId);
+                if (container) {
+                    container.innerHTML = `<div class="render-error" style="color:red; padding:10px;">MathJax渲染错误: ${error.message}</div>`;
+                }
+                // 我们仍然解析Promise而不是拒绝，这样UI不会崩溃
+                resolve({ svg: container ? container.innerHTML : `<div>渲染错误</div>` });
             }
         });
     }

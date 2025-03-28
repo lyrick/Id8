@@ -258,7 +258,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // 处理渲染错误的函数
     function handleRenderError(error, loadingToast) {
         console.error('图表渲染错误:', error);
-    toast.error(`ER图语法错误: ${error.message.split('\n')[0]}`, 5000);
+        // 根据错误类型显示适当的错误消息
+        if(error.message && error.message.includes('erDiagram')) {
+            toast.error(`ER图语法错误: ${error.message.split('\n')[0]}`, 5000);
+        } else {
+            toast.error(`图表生成失败: ${error.message.split('\n')[0]}`, 5000);
+        }
         
         // 隐藏加载提示
         if (loadingToast) loadingToast.hide();
@@ -323,7 +328,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 下载图表为图片
+    // 下载图表为超清图片
     async function downloadDiagram() {
         if (!mermaidDiagram.innerHTML) {
             toast.error('请先生成流程图');
@@ -331,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // 显示加载中提示
-        const loadingToast = toast.loading('正在生成图片...');
+        const loadingToast = toast.loading('正在生成超清图片...');
         
         // 禁用下载按钮，防止重复点击
         downloadBtn.disabled = true;
@@ -348,32 +353,99 @@ document.addEventListener('DOMContentLoaded', function() {
                 await loadHtml2Canvas();
             }
             
-            // 设置背景色
+            // 保存原始状态
+            const originalTransform = mermaidDiagram.style.transform;
             const originalBg = previewContainer.style.backgroundColor;
+            const highResScale = 4; // 提高超高清倍数到4倍
+            
+            // 重置缩放和位置，确保图表完全可见
+            mermaidDiagram.style.transform = 'scale(1)';
             previewContainer.style.backgroundColor = currentBgColor;
             
             // 使用setTimeout避免UI阻塞
             setTimeout(async () => {
                 try {
-                    // 使用html2canvas捕获图表
-                    const canvas = await html2canvas(previewContainer, {
-                        backgroundColor: currentBgColor,
-                        scale: 2, // 提高分辨率
-                        logging: false
-                    });
+                    // 检查是否为SVG内容
+                    const isSvgContent = mermaidDiagram.querySelector('svg');
+                    let canvas;
                     
-                    // 恢复原始背景
+                    if (isSvgContent && typeof XMLSerializer !== 'undefined') {
+                        // 使用SVG优化方法处理
+                        canvas = await svgToHighResCanvas(mermaidDiagram, highResScale, currentBgColor);
+                    } else {
+                        // 创建临时容器，避免影响用户界面
+                        const tempContainer = document.createElement('div');
+                        tempContainer.style.position = 'absolute';
+                        tempContainer.style.left = '-9999px';
+                        tempContainer.style.top = '-9999px';
+                        tempContainer.style.width = previewContainer.offsetWidth + 'px';
+                        tempContainer.style.height = previewContainer.offsetHeight + 'px';
+                        tempContainer.style.backgroundColor = currentBgColor;
+                        tempContainer.style.padding = '40px'; // 增加内边距，确保图表不会被裁剪
+                        tempContainer.style.overflow = 'visible'; // 确保内容不会被裁剪
+                        
+                        // 克隆当前图表到临时容器
+                        const clonedContent = mermaidDiagram.cloneNode(true);
+                        clonedContent.style.transform = 'scale(1)'; // 重置缩放
+                        tempContainer.appendChild(clonedContent);
+                        document.body.appendChild(tempContainer);
+                        
+                        // 使用html2canvas捕获图表，增强配置
+                        canvas = await html2canvas(tempContainer, {
+                            backgroundColor: currentBgColor,
+                            scale: highResScale, // 提高分辨率
+                            logging: false,
+                            allowTaint: true,
+                            useCORS: true,
+                            imageTimeout: 0, // 不限制图像加载时间
+                            windowWidth: tempContainer.offsetWidth + 200, // 确保捕获完整内容
+                            windowHeight: tempContainer.offsetHeight + 200,
+                            x: -40, // 补偿内边距
+                            y: -40, // 补偿内边距
+                            onclone: (clonedDoc) => {
+                                // 在克隆的文档中优化SVG元素
+                                const svgs = clonedDoc.querySelectorAll('svg');
+                                svgs.forEach(svg => {
+                                    // 确保SVG有明确的宽高
+                                    if (!svg.getAttribute('width')) {
+                                        svg.setAttribute('width', svg.getBoundingClientRect().width);
+                                    }
+                                    if (!svg.getAttribute('height')) {
+                                        svg.setAttribute('height', svg.getBoundingClientRect().height);
+                                    }
+                                    // 确保所有子元素都有正确的样式
+                                    const allElements = svg.querySelectorAll('*');
+                                    allElements.forEach(el => {
+                                        if (el.style.display === 'none') return;
+                                        // 确保线条粗细适合高分辨率
+                                        if (el.tagName === 'path' || el.tagName === 'line') {
+                                            const strokeWidth = parseFloat(getComputedStyle(el).strokeWidth || '1');
+                                            if (strokeWidth < 1.5) {
+                                                el.style.strokeWidth = '1.5px';
+                                            }
+                                        }
+                                    });
+                                });
+                            }
+                        });
+                        
+                        // 移除临时容器
+                        document.body.removeChild(tempContainer);
+                    }
+                    
+                    // 恢复原始状态
+                    mermaidDiagram.style.transform = originalTransform;
                     previewContainer.style.backgroundColor = originalBg;
                     
                     // 创建下载链接
                     const link = document.createElement('a');
-                    link.download = `流程图_${new Date().toISOString().slice(0, 10)}.png`;
-                    link.href = canvas.toDataURL('image/png');
+                    link.download = `流程图_超清_${new Date().toISOString().slice(0, 10)}.png`;
+                    link.href = canvas.toDataURL('image/png', 1.0); // 使用最高质量设置
                     link.click();
                     
                     // 隐藏加载提示并显示成功提示
                     loadingToast.hide();
-                    toast.success('图片已成功下载');
+                    toast.success('超清图片已成功下载');
                 } catch (error) {
                     console.error('下载图片错误:', error);
                     loadingToast.hide();
@@ -389,6 +461,103 @@ document.addEventListener('DOMContentLoaded', function() {
             toast.error('下载图片失败，请重试');
             downloadBtn.disabled = false;
         }
+    }
+    
+    /**
+     * 将SVG转换为高分辨率Canvas
+     * @param {Element} svgElement - SVG元素或包含SVG的元素
+     * @param {number} scale - 缩放比例
+     * @param {string} bgColor - 背景颜色
+     * @returns {Promise<HTMLCanvasElement>} 返回高分辨率Canvas
+     */
+    async function svgToHighResCanvas(svgElement, scale = 4, bgColor = '#ffffff') {
+        // 获取SVG元素
+        const svg = svgElement.tagName === 'svg' ? svgElement : svgElement.querySelector('svg');
+        if (!svg) {
+            throw new Error('未找到SVG元素');
+        }
+        
+        // 克隆SVG以避免修改原始元素
+        const clonedSvg = svg.cloneNode(true);
+        
+        // 获取SVG尺寸
+        const svgRect = svg.getBoundingClientRect();
+        let width = svgRect.width;
+        let height = svgRect.height;
+        
+        // 确保SVG有明确的宽高属性
+        clonedSvg.setAttribute('width', width);
+        clonedSvg.setAttribute('height', height);
+        
+        // 优化SVG以提高清晰度
+        const allElements = clonedSvg.querySelectorAll('*');
+        allElements.forEach(el => {
+            if (el.style.display === 'none') return;
+            
+            // 增强线条粗细
+            if (el.tagName === 'path' || el.tagName === 'line' || el.tagName === 'polyline') {
+                const strokeWidth = parseFloat(el.getAttribute('stroke-width') || '1');
+                if (strokeWidth < 1.5) {
+                    el.setAttribute('stroke-width', '1.5');
+                }
+            }
+            
+            // 确保文本清晰可见
+            if (el.tagName === 'text') {
+                const fontSize = parseFloat(getComputedStyle(el).fontSize || '12');
+                if (fontSize < 14) {
+                    el.style.fontSize = '14px';
+                }
+                // 添加文本描边以增强可读性
+                el.setAttribute('paint-order', 'stroke');
+                el.setAttribute('stroke', bgColor);
+                el.setAttribute('stroke-width', '0.5');
+            }
+        });
+        
+        // 将SVG转换为字符串
+        const serializer = new XMLSerializer();
+        let svgString = serializer.serializeToString(clonedSvg);
+        
+        // 添加XML命名空间
+        if (!svgString.includes('xmlns="http://www.w3.org/2000/svg"')) {
+            svgString = svgString.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        
+        // 创建Blob和URL
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(svgBlob);
+        
+        // 创建Image对象
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = url;
+        });
+        
+        // 创建高分辨率Canvas
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 设置Canvas尺寸为SVG尺寸的scale倍
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        
+        // 设置背景色
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 应用缩放
+        ctx.scale(scale, scale);
+        
+        // 绘制图像
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // 释放URL资源
+        URL.revokeObjectURL(url);
+        
+        return canvas;
     }
 
     // 初始化渲染器管理器

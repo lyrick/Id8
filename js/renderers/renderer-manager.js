@@ -29,6 +29,48 @@ class RendererManager {
                     theme: 'default',
                     securityLevel: 'loose',
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                    flowchart: {
+                        // 美化流程图样式
+                        curve: 'basis', // 使用平滑曲线
+                        diagramPadding: 20,
+                        htmlLabels: true,
+                        nodeSpacing: 50,
+                        rankSpacing: 70,
+                        padding: 15,
+                        useMaxWidth: true,
+                        // 自定义节点样式
+                        htmlMode: true,
+                        defaultRenderer: 'dagre-wrapper'
+                    },
+                    // 自定义主题
+                    themeVariables: {
+                        // 主色调
+                        primaryColor: '#FCEA00',
+                        primaryTextColor: '#333333',
+                        primaryBorderColor: '#FA8A00',
+                        // 线条样式
+                        lineColor: '#FA8A00',
+                        // 节点样式
+                        nodeBorder: '#FA8A00',
+                        mainBkg: '#FFFDF0',
+                        // 文本样式
+                        fontSize: '16px',
+                        // 其他元素
+                        edgeLabelBackground: '#FFFDF0',
+                        // 特殊节点样式
+                        classBorder: '#33B8DB',
+                        classFontSize: '14px',
+                        classLabelColor: '#333333',
+                        // 状态图样式
+                        stateBkg: '#FFFDF0',
+                        stateBorder: '#FA8A00',
+                        // 序列图样式
+                        actorBkg: '#FFFDF0',
+                        actorBorder: '#FA8A00',
+                        actorTextColor: '#333333',
+                        noteBkg: '#FFFDF0',
+                        noteBorder: '#FA8A00'
+                    },
                     gantt: {
                         // 确保甘特图日期格式正确
                         dateFormat: 'YYYY-MM-DD',
@@ -43,8 +85,8 @@ class RendererManager {
                         minEntityWidth: 100,
                         minEntityHeight: 75,
                         entityPadding: 15,
-                        stroke: 'gray',
-                        fill: 'honeydew',
+                        stroke: '#FA8A00',
+                        fill: '#FFFDF0',
                         fontSize: 12,
                         useMaxWidth: true
                     }
@@ -114,21 +156,39 @@ class RendererManager {
                     if (typeof MathJax !== 'undefined') {
                         // 确保MathJax已完全加载并初始化
                         if (typeof MathJax.typesetPromise === 'function') {
+                            console.log('MathJax已加载并准备就绪');
                             resolve();
                             return;
                         }
                     }
                     
+                    // 使用与mathjax.js中相同的配置
                     window.MathJax = {
                         tex: {
                             inlineMath: [['$', '$'], ['\\(', '\\)']],
                             displayMath: [['$$', '$$'], ['\\[', '\\]']],
-                            processEscapes: true
+                            processEscapes: true,
+                            processEnvironments: true
                         },
                         svg: { fontCache: 'global' },
-                        startup: { ready: () => { resolve(); } }
+                        startup: {
+                            typeset: false, // 禁用自动排版，我们将手动控制
+                            ready: () => {
+                                console.log('MathJax准备就绪');
+                                resolve();
+                            }
+                        }
                     };
                     
+                    // 尝试使用独立的mathjaxRenderer实例
+                    if (typeof mathjaxRenderer !== 'undefined') {
+                        console.log('使用独立的MathJax渲染器实例初始化');
+                        window.mathjaxRenderer = mathjaxRenderer; // 确保全局可访问
+                        return mathjaxRenderer.init().then(resolve);
+                    }
+                    
+                    // 如果没有独立实例，加载MathJax库
+                    console.log('加载MathJax库...');
                     this.loadScript('mathjax@3/es5/tex-svg.js');
                 });
             },
@@ -250,8 +310,11 @@ class RendererManager {
                 break;
             case 'mathjax':
                 if (typeof mathjaxRenderer !== 'undefined') {
+                    console.log('使用独立的MathJax渲染器实例初始化');
+                    window.mathjaxRenderer = mathjaxRenderer; // 确保全局可访问
                     initPromise = mathjaxRenderer.init();
                 } else {
+                    console.log('使用内置MathJax初始化方法');
                     initPromise = renderer.init();
                 }
                 break;
@@ -705,56 +768,46 @@ class RendererManager {
                 
                 // 检查MathJax是否正确加载
                 if (typeof MathJax === 'undefined' || typeof MathJax.typesetPromise !== 'function') {
-                    console.warn('MathJax库未正确加载，尝试动态加载');
+                    console.warn('MathJax库未正确加载，尝试使用mathjaxRenderer实例');
                     
-                    // 配置MathJax
-                    window.MathJax = {
-                        tex: {
-                            inlineMath: [['$', '$'], ['\\(', '\\)']],
-                            displayMath: [['$$', '$$'], ['\\[', '\\]']],
-                            processEscapes: true,
-                            processEnvironments: true
-                        },
-                        svg: { fontCache: 'global' },
-                        startup: {
-                            typeset: false,
-                            ready: () => {
-                                console.log('MathJax加载成功');
-                                // 重新调用渲染方法
-                                this.renderMathJax(code, container).then(resolve).catch(reject);
-                            }
+                    // 尝试使用独立的mathjaxRenderer实例
+                    if (typeof window.mathjaxRenderer === 'undefined') {
+                        // 如果没有实例，尝试动态创建
+                        if (typeof MathJaxRenderer === 'function') {
+                            window.mathjaxRenderer = new MathJaxRenderer();
+                            return window.mathjaxRenderer.render(code, container).then(resolve).catch(reject);
                         }
-                    };
-                    
-                    // 动态加载MathJax
-                    const script = document.createElement('script');
-                    script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
-                    script.async = false;
-                    script.onerror = () => {
+                        
+                        // 如果无法创建实例，显示错误信息
                         console.error('无法加载MathJax库');
-                        containerEl.innerHTML = `<div style="text-align:center; padding:10px; font-style:italic;">$$${code}$$</div>`;
+                        containerEl.innerHTML = `<div style="text-align:center; padding:10px; color:red;">无法加载MathJax库，请刷新页面重试</div>`;
                         resolve({ svg: containerEl.innerHTML });
-                    };
-                    document.head.appendChild(script);
-                    return;
+                        return;
+                    }
+                    
+                    // 使用已有的mathjaxRenderer实例
+                    return window.mathjaxRenderer.render(code, container).then(resolve).catch(reject);
                 }
                 
                 console.log('使用MathJax库渲染');
                 // 使用MathJax渲染公式，确保传入正确的DOM元素
                 MathJax.typesetPromise([formulaContainer])
                     .then(() => {
+                        console.log('MathJax渲染成功');
                         resolve({ svg: containerEl.innerHTML });
                     })
                     .catch(error => {
                         console.error('MathJax渲染错误:', error);
-                        containerEl.innerHTML = `<div class="render-error">MathJax渲染失败: ${error.message}</div>`;
+                        containerEl.innerHTML = `<div class="render-error" style="color:red; padding:10px;">MathJax渲染失败: ${error.message}</div>`;
                         resolve({ svg: containerEl.innerHTML });
                     });
             } catch (error) {
                 console.error('MathJax渲染错误:', error);
                 const containerEl = document.getElementById(container);
-                containerEl.innerHTML = `<div class="render-error">MathJax渲染错误: ${error.message}</div>`;
-                resolve({ svg: containerEl.innerHTML });
+                if (containerEl) {
+                    containerEl.innerHTML = `<div class="render-error" style="color:red; padding:10px;">MathJax渲染错误: ${error.message}</div>`;
+                }
+                resolve({ svg: containerEl ? containerEl.innerHTML : `<div>渲染错误</div>` });
             }
         });
     }

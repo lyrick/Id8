@@ -99,7 +99,10 @@ class LanguageSwitcher {
             'zoom_in': '放大',
             'zoom_out': '缩小',
             'reset_zoom': '重置缩放',
-            'toggle_layout': '切换布局'
+            'toggle_layout': '切换布局',
+            'copy_image': '复制图片',
+            'copy_success': '图片已复制到剪贴板',
+            'copy_error': '复制图片失败，请重试'
         };
         
         // 英文翻译
